@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Akash Maurya
+#
+
 import os
 os.environ["OMP_NUM_THREADS"] = "1"
 import numpy as np
@@ -5,9 +8,11 @@ from numba import njit
 import h5py
 import scipy.interpolate as si
 import TPI
+from lal import SpinWeightedSphericalHarmonic
 from pycbc.conversions import eta_from_q
 import re
 
+_amp_correction_factor = np.real(SpinWeightedSphericalHarmonic(0, 0, -2, 2, 2)) # The amplitude normalization factor saved in the surrogate files is off by this factor. So we correct for it here.  
 
 @njit(fastmath=True)
 def mode_from_amp_phase(amp, phase):
@@ -104,7 +109,7 @@ class CircularSurrogate:
         amp = np.interp(new_t_grid, t_grid_sur, amp_native)
         phase = np.interp(new_t_grid, t_grid_sur, phase_native)
     
-        amp *= mass_scaling_factor
+        amp *= mass_scaling_factor/_amp_correction_factor # Correcting for the amplitude normalization factor that was off in the surrogate files.
         
         if remove_initial_phase:
             phase -= phase[0]
@@ -214,22 +219,29 @@ class EccentricSurrogate:
                  delta_t, 
                  t_start=None, 
                  t_end=None, 
-                 remove_start_phase=True):
+                 remove_start_phase=True,
+                 return_orbital_variables=False):
                 
         q, e_ref, l_ref = params_new
         mass_scaling_factor = M/self.sur_total_mass
         
-        t_grid_sur = self.t_grid_sur
-        l_grid_sur = self.l_grid_sur
+        t_grid_sur = self.t_grid_sur # The native time grid of the surrogate
+        l_grid_sur = self.l_grid_sur # The native shifted mean anomaly grid of the surrogate
+        
+        t_min_sur = t_grid_sur[0] * mass_scaling_factor
+        t_max_sur = t_grid_sur[-1] * mass_scaling_factor
         
         if t_start is None:
-            t_start = t_grid_sur[0] * mass_scaling_factor
+            t_start = t_min_sur
         if t_end is None:
-            t_end = t_grid_sur[-1] *  mass_scaling_factor
+            t_end = t_max_sur
         
+        if t_start < t_min_sur or t_end > t_max_sur:
+            raise ValueError(f"""Requested time range [{t_start:.2f}s, {t_end:.2f}s] is out of bounds for the surrogate, which supports [{t_min_sur:.2f}s, {t_max_sur:.2f}s] for the given total mass of {M:.2f} M_sun. 
+Please choose a time range within these bounds.""")
         
         start_idx_t = np.searchsorted(t_grid_sur, t_start/mass_scaling_factor, side='right') - 1
-        start_idx_t -= 5 # Leaving some buffer for no BC related problems in spline interpolation
+        start_idx_t -= 5 # Leaving some buffer for to avoid BC related problems in spline interpolation
         # Checking if we even have data this deep in the starting
         if start_idx_t < 0:
             start_idx_t = 0 
@@ -259,7 +271,7 @@ class EccentricSurrogate:
 
         l_start = lt_relation[0]
         start_idx_l = np.searchsorted(l_grid_sur, l_start, side='right') - 1
-        start_idx_l -= 5 # Leaving some buffer for no BC related problems in spline interpolation
+        start_idx_l -= 5 # Leaving some buffer for to avoid BC related problems in spline interpolation
         # Checking if we even have data this deep in the starting
         if start_idx_l < 0:
             start_idx_l = 0 
@@ -274,7 +286,7 @@ class EccentricSurrogate:
         delta_phi = np.interp(l_s, l_grid_sur, delta_phase_native)
         res_circ_phi = np.interp(l_s, l_grid_sur, res_circ_phase_native)
 
-        delta_A *= mass_scaling_factor
+        delta_A *= mass_scaling_factor/_amp_correction_factor
             
         amp0_, phase0_ = self.circ_sur(M=M, q=q, 
                                     delta_t=delta_t, 
@@ -287,5 +299,38 @@ class EccentricSurrogate:
         phase = phase0_ + res_circ_phi + delta_phi
         if remove_start_phase:
             phase -= phase[0]
+        
+        if return_orbital_variables:
+            e_native = self.norm_factor["e"]*np.dot(e_node_vals, self.eim_B["e"][:, start_idx_l: ])
+            e = np.interp(l_s, l_grid_sur, e_native)
+            
+            l = l_s + mean_anomaly_offset_of_shifted_mean_anomaly
+            l -= 2*np.pi*np.floor(l[0]/(2*np.pi)) # Bringing starting value of mean anomaly in [0, 2pi)
+                    
+            x_node_vals = np.asarray([self.fit["x"][i]([eta, e_ref, l_ref]) for i in range(len(self.fit["x"]))])
+            x_native = self.norm_factor["x"]*np.dot(x_node_vals, self.eim_B["x"][:, start_idx_l: ])
+            x = np.interp(l_s, l_grid_sur, x_native)
+            
+            orb_vars = {"e": e, "l": l, "x": x}
+            return new_t_grid, orb_vars, mode_from_amp_phase(amp, phase)
 
-        return new_t_grid, mode_from_amp_phase(amp, phase)
+        return new_t_grid, mode_from_amp_phase(amp, phase) 
+
+_surrogate_instance = None
+def _get_surrogate():
+    global _surrogate_instance
+    if _surrogate_instance is None:
+        sur_data_dir = os.environ.get("ESIGMASUR_DATA_DIR", None)
+        # sur_data_dir = os.environ.get("ESIGMASUR_DATA_DIR", default=_DEFAULT_DATA_DIR)
+        if sur_data_dir is None:
+            raise RuntimeError(
+                "Surrogate data not found. Please set the ESIGMASUR_DATA_DIR "
+                "environment variable to the path of the surrogate data directory.")
+        ecc_sur_data_dir = os.path.join(sur_data_dir, "ecc_sur_data")
+        circ_sur_data_dir = os.path.join(sur_data_dir, "circ_sur_data")
+        if not os.path.isdir(ecc_sur_data_dir) or not os.path.isdir(circ_sur_data_dir):
+            raise RuntimeError(
+                f"Surrogate data not found. Please ensure that the environment variable ESIGMASUR_DATA_DIR points to the surrogate data directory.")
+        _surrogate_instance = EccentricSurrogate(ecc_data_dir=ecc_sur_data_dir, circ_data_dir=circ_sur_data_dir)
+        print("Surrogate data loaded successfully.")
+    return _surrogate_instance

@@ -320,17 +320,17 @@ _surrogate_instance = None
 def _get_surrogate():
     global _surrogate_instance
     if _surrogate_instance is None:
-        sur_data_dir = os.environ.get("ESIGMASUR_DATA_DIR", None)
+        sur_data_dir = os.environ.get("ESIGMASUR_DATA_PATH", None)
         # sur_data_dir = os.environ.get("ESIGMASUR_DATA_DIR", default=_DEFAULT_DATA_DIR)
         if sur_data_dir is None:
             raise RuntimeError(
-                "Surrogate data not found. Please set the ESIGMASUR_DATA_DIR "
+                "Surrogate data not found. Please set the ESIGMASUR_DATA_PATH "
                 "environment variable to the path of the surrogate data directory.")
         ecc_sur_data_dir = os.path.join(sur_data_dir, "ecc_sur_data")
         circ_sur_data_dir = os.path.join(sur_data_dir, "circ_sur_data")
         if not os.path.isdir(ecc_sur_data_dir) or not os.path.isdir(circ_sur_data_dir):
             raise RuntimeError(
-                f"Surrogate data not found. Please ensure that the environment variable ESIGMASUR_DATA_DIR points to the surrogate data directory.")
+                f"Surrogate data not found. Please ensure that the environment variable ESIGMASUR_DATA_PATH points to the surrogate data directory.")
         _surrogate_instance = EccentricSurrogate(ecc_data_dir=ecc_sur_data_dir, circ_data_dir=circ_sur_data_dir)
         print("Surrogate data loaded successfully.")
     return _surrogate_instance

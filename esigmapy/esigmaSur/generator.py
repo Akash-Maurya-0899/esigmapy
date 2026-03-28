@@ -17,6 +17,24 @@ from .esigmaSur import _get_surrogate
 ECCENTRICITY_LEVEL_ISCO_WARNING = 0.02
 ECCENTRICITY_LEVEL_ISCO_ERROR = 0.1
 
+def get_surrogate_object():
+    """
+    Returns the surrogate object. Useful for advanced users who want to directly
+    interact with the surrogate object and use its methods.
+    """
+    return _get_surrogate()
+
+def get_esigmasur_metadata(key):
+    """
+    Returns metadata of the surrogate
+
+    Parameters:
+    -----------
+        key -- Metadata key to return
+    """
+    sur = _get_surrogate()
+    return sur.get_metadata(key)
+
 def get_inspiral_esigmasur_modes(
     mass1,
     mass2,
@@ -85,7 +103,7 @@ def get_inspiral_esigmasur_modes(
     modes = {}
     
     retval = sur(M = total_mass,
-                            params_new = [q, reference_eccentricity, reference_mean_anomaly], # q, e, l at t=t_ref
+                            params = [q, reference_eccentricity, reference_mean_anomaly], # q, e, l at t=t_ref
                             delta_t = delta_t, 
                             t_start=t_start, 
                             t_end=t_end, 

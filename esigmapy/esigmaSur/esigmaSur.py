@@ -25,16 +25,39 @@ def _unwrap_single_float(val):
         return float(val.item())
     else:
         raise ValueError(f"Expected a float or a numpy array of size 1, got: {val} ({type(val)})")
-
-class CircularSurrogate:
+    
+class Surrogate:
     def __init__(self, data_dir):
-        self.sur_dir = data_dir
+        self.sur_dir = data_dir # The directory where the surrogate data is stored
+        self.data_piece_names = None # Surrogate data pieces. This will be set in the child classes, as the circular and eccentric surrogates are built of different data pieces.
+
+        self.norm_factor = {} # Normalization factors for the surrogate data pieces, which are used to un-normalize the surrogate data pieces before reconstructing the waveform; read from the surrogate files via self.load_norm_factors().
+        self.eim_B = {} # The EIM B-matrices for the surrogate data pieces; read from the surrogate files via self.load_eim_B_matrices().
+        self.fit = {} # The parametric fits for the surrogate data pieces at EI nodes; read from the surrogate files via self.load_param_space_fits(), defined in child classes.
+
+    def get_metadata(self, key):
+        filename = os.path.join(self.sur_dir, "surrogate_metadata.hdf")
+        with h5py.File(filename, "r") as f:
+            return f[key][()]
+
+    def load_norm_factors(self):
+        filename_norm_factors = os.path.join(self.sur_dir, f"norm_factors.npz")
+        norm_factor_dataset = np.load(filename_norm_factors)
+        for data_piece_name in self.data_piece_names:
+            self.norm_factor[data_piece_name] = norm_factor_dataset[f"norm_factor_{data_piece_name}"]
+        norm_factor_dataset.close()
+        
+    def load_eim_B_matrices(self):
+        filename_eim = os.path.join(self.sur_dir, f"eim_B.npz")
+        eim_B_dataset = np.load(filename_eim)
+        for data_piece_name in self.data_piece_names:
+            self.eim_B[data_piece_name] = eim_B_dataset[f"eim_B_{data_piece_name}"]
+        eim_B_dataset.close()
+
+class CircularSurrogate(Surrogate):
+    def __init__(self, data_dir):
+        super().__init__(data_dir=data_dir)
         self.data_piece_names = ["amp", "phase"]
-
-        self.norm_factor = {}
-        self.eim_B = {}
-        self.fit = {}
-
         self.load_sur_metadata()
         self.load_norm_factors()
         self.load_eim_B_matrices()
@@ -46,23 +69,9 @@ class CircularSurrogate:
             self.sur_total_mass = f["M"][()]
             self.t_grid_sur = f["t_grid_sur"][()]
 
-    def load_norm_factors(self):
-        filename_norm_factors = os.path.join(self.sur_dir, f"norm_factors.npz")
-        norm_factor_dataset = np.load(filename_norm_factors)
-        for data_piece_name in self.data_piece_names:
-            self.norm_factor[data_piece_name] = norm_factor_dataset[f"norm_factor_{data_piece_name}"]
-        norm_factor_dataset.close()
-
-    def load_eim_B_matrices(self):
-        filename_eim = os.path.join(self.sur_dir, f"eim_B.npz")
-        eim_B_dataset = np.load(filename_eim)
-        for data_piece_name in self.data_piece_names:
-            self.eim_B[data_piece_name] = eim_B_dataset[f"eim_B_{data_piece_name}"]
-        eim_B_dataset.close()
-
     @staticmethod
     def load_interpolant(filename):
-        # With scipy BSplines
+        # scipy BSplines
         tck = np.load(filename)
         vec_interpolant = si.BSpline(tck['t'], tck['c'], tck['k'], extrapolate=False)
         return vec_interpolant
@@ -118,20 +127,15 @@ class CircularSurrogate:
         
         return new_t_grid, mode_from_amp_phase(amp, phase)
 
-class EccentricSurrogate:
+class EccentricSurrogate(Surrogate):
     def __init__(self, ecc_data_dir, circ_data_dir, verbose=False):
-        self.sur_dir = ecc_data_dir
+        super().__init__(data_dir=ecc_data_dir)
         self.circ_sur_dir = circ_data_dir
-
         self.circ_sur = CircularSurrogate(data_dir=self.circ_sur_dir)
 
         self.data_piece_names = ["res_amp", "res_phase", "res_circ_phase", "shifted_mean_anomaly", "e", "x"]
-        
-        self.norm_factor = {}
-        self.eim_B = {}
         self.ei_indices = {}
-        self.fit = {}
-
+        
         self.load_sur_metadata()
         self.load_norm_factors()
         self.load_eim_B_matrices()
@@ -145,20 +149,6 @@ class EccentricSurrogate:
             self.t_ref = f["t_ref"][()]
             self.t_grid_sur = f["t_grid_sur"][()]
             self.l_grid_sur = f["l_grid_sur"][()]
-
-    def load_norm_factors(self):
-        filename_norm_factors = os.path.join(self.sur_dir, f"norm_factors.npz")
-        norm_factor_dataset = np.load(filename_norm_factors)
-        for data_piece_name in self.data_piece_names:
-            self.norm_factor[data_piece_name] = norm_factor_dataset[f"norm_factor_{data_piece_name}"]
-        norm_factor_dataset.close()
-
-    def load_eim_B_matrices(self):
-        filename_eim = os.path.join(self.sur_dir, f"eim_B.npz")
-        eim_B_dataset = np.load(filename_eim)
-        for data_piece_name in self.data_piece_names:
-            self.eim_B[data_piece_name] = eim_B_dataset[f"eim_B_{data_piece_name}"]
-        eim_B_dataset.close()
 
     def load_ei_indices(self):
         filename_ei_indices = os.path.join(self.sur_dir, f"ei_indices.npz")
@@ -215,14 +205,14 @@ class EccentricSurrogate:
         
     def __call__(self, 
                  M, 
-                 params_new, 
+                 params, 
                  delta_t, 
                  t_start=None, 
                  t_end=None, 
                  remove_start_phase=True,
                  return_orbital_variables=False):
                 
-        q, e_ref, l_ref = params_new
+        q, e_ref, l_ref = params
         mass_scaling_factor = M/self.sur_total_mass
         
         t_grid_sur = self.t_grid_sur # The native time grid of the surrogate
@@ -251,7 +241,6 @@ Please choose a time range within these bounds.""")
         num_samples = int((t_end - t_start)/delta_t) + 1 
         new_t_grid = t_start + np.arange(num_samples)*delta_t
 
-        
         e_node_vals = np.asarray([self.fit["e"][i]([eta, e_ref, l_ref]) for i in range(len(self.fit["e"]))])
         e_eim_res_amp = self.norm_factor["e"]*np.dot(e_node_vals, self.eim_B["e"][:, self.ei_indices["res_amp"]])
         e_eim_res_phase = self.norm_factor["e"]*np.dot(e_node_vals, self.eim_B["e"][:, self.ei_indices["res_phase"]])
@@ -321,7 +310,6 @@ def _get_surrogate():
     global _surrogate_instance
     if _surrogate_instance is None:
         sur_data_dir = os.environ.get("ESIGMASUR_DATA_PATH", None)
-        # sur_data_dir = os.environ.get("ESIGMASUR_DATA_DIR", default=_DEFAULT_DATA_DIR)
         if sur_data_dir is None:
             raise RuntimeError(
                 "Surrogate data not found. Please set the ESIGMASUR_DATA_PATH "

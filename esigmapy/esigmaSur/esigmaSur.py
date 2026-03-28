@@ -36,9 +36,24 @@ class Surrogate:
         self.fit = {} # The parametric fits for the surrogate data pieces at EI nodes; read from the surrogate files via self.load_param_space_fits(), defined in child classes.
 
     def get_metadata(self, key):
+        """
+        Returns metadata of the surrogate
+
+        Parameters:
+        -----------
+        key -- Metadata key (string) or list of keys to return.
+        
+        Returns:
+        --------        
+        Metadata value(s) corresponding to the key(s). 
+        If a single key is provided, returns the corresponding value, 
+        otherwise returns a list of values corresponding to the list of keys.
+        """
         filename = os.path.join(self.sur_dir, "surrogate_metadata.hdf")
         with h5py.File(filename, "r") as f:
-            return f[key][()]
+            if isinstance(key, str):
+                return f[key][()]
+            return [f[k][()] for k in key]
 
     def load_norm_factors(self):
         filename_norm_factors = os.path.join(self.sur_dir, f"norm_factors.npz")
@@ -64,11 +79,8 @@ class CircularSurrogate(Surrogate):
         self.load_param_space_fits()
 
     def load_sur_metadata(self):
-        filename = os.path.join(self.sur_dir, "surrogate_metadata.hdf")
-        with h5py.File(filename, "r") as f:
-            self.sur_total_mass = f["M"][()]
-            self.t_grid_sur = f["t_grid_sur"][()]
-
+        self.sur_total_mass, self.t_grid_sur = self.get_metadata(["M", "t_grid_sur"])
+    
     @staticmethod
     def load_interpolant(filename):
         # scipy BSplines
@@ -143,12 +155,7 @@ class EccentricSurrogate(Surrogate):
         self.load_param_space_fits(verbose=verbose)
 
     def load_sur_metadata(self):
-        filename = os.path.join(self.sur_dir, "surrogate_metadata.hdf")
-        with h5py.File(filename, "r") as f:
-            self.sur_total_mass = f["M"][()]
-            self.t_ref = f["t_ref"][()]
-            self.t_grid_sur = f["t_grid_sur"][()]
-            self.l_grid_sur = f["l_grid_sur"][()]
+        self.sur_total_mass, self.t_ref, self.t_grid_sur, self.l_grid_sur = self.get_metadata(["M", "t_ref", "t_grid_sur", "l_grid_sur"])
 
     def load_ei_indices(self):
         filename_ei_indices = os.path.join(self.sur_dir, f"ei_indices.npz")

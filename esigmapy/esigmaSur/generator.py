@@ -19,21 +19,10 @@ ECCENTRICITY_LEVEL_ISCO_ERROR = 0.1
 
 def get_surrogate_object():
     """
-    Returns the surrogate object. Useful for advanced users who want to directly
-    interact with the surrogate object and use its methods.
+    Returns the surrogate object. Useful for advanced users who want to 
+    directly use the base surrogate class' functionalities.
     """
     return _get_surrogate()
-
-def get_esigmasur_metadata(key):
-    """
-    Returns metadata of the surrogate
-
-    Parameters:
-    -----------
-        key -- Metadata key to return
-    """
-    sur = _get_surrogate()
-    return sur.get_metadata(key)
 
 def get_inspiral_esigmasur_modes(
     mass1,
@@ -44,7 +33,7 @@ def get_inspiral_esigmasur_modes(
     t_start=None,
     t_end=None,
     distance=1.0,
-    include_conjugate_modes=True,
+    include_conjugate_modes=False,
     return_orbital_params=False,
     return_pycbc_timeseries=True,
     verbose=False,
@@ -55,18 +44,21 @@ def get_inspiral_esigmasur_modes(
     Parameters:
     -----------
         mass1, mass2            -- Binary's component masses (in solar masses)
-        f_lower                 -- Starting frequency of the waveform (in Hz)
-        f_ref                   -- Reference frequency at which to define the waveform
-                                   parameters.
-                                   We require f_ref <= f_lower. f_ref = f_lower by default.
         delta_t                 -- Waveform's time grid-spacing (in s)
-        reference_eccentricity            -- Eccentricity at reference time of surrogate
-        reference_mean_anomaly            -- Mean anomaly at reference time of surrogate (in rad)
+        reference_eccentricity  -- Eccentricity at reference time of surrogate
+        reference_mean_anomaly  -- Mean anomaly at reference time of surrogate (in rad)
         distance                -- Luminosity distance to the binary (in Mpc)
+        t_start, t_end          -- Start and end times of the waveform 
+                                   to be generated (in seconds).
+                                   Note that the surrogate defines t=0 at the end of 
+                                   inspiral, so t_start and t_end should be negative 
+                                   and t_start < t_end <= 0.
+                                   Defaults to the full duration of the surrogate.
         include_conjugate_modes -- If True, negative "m" modes are included as well
         return_orbital_params   -- If True, returns the orbital evolution of all the orbital elements.
-                                   Can also be a list of orbital variable names to return only those
-                                   specific variables. Available orbital variables are:
+                                   Can also be a list of orbital variable names to 
+                                   return only those specific variables. Available 
+                                   orbital variables are:
                                    ['x', 'e', 'l']        
         return_pycbc_timeseries -- If True, returns data in the form of PyCBC timeseries.
                                    True by default.
@@ -178,24 +170,29 @@ def get_inspiral_esigmasur_waveform(
     Parameters:
     -----------
         mass1, mass2            -- Binary's component masses (in solar masses)
-        f_lower                 -- Starting frequency of the waveform (in Hz)
-        f_ref                   -- Reference frequency at which to define the waveform
-                                   parameters.
-                                   We require f_ref <= f_lower. f_ref = f_lower by default.
         delta_t                 -- Waveform's time grid-spacing (in s)
+        t_start, t_end          -- Start and end times of the waveform 
+                                   to be generated (in seconds).
+                                   Note that the surrogate defines t=0 at the end of 
+                                   inspiral, so t_start and t_end should be negative 
+                                   and t_start < t_end <= 0.
+                                   Defaults to the full duration of the surrogate.
         reference_eccentricity  -- Eccentricity at reference time of surrogate
         reference_mean_anomaly  -- Mean anomaly at reference time of surrogate (in rad)        
-        inclination             -- Inclination (in rad), defined as the angle between the orbital
-                                   angular momentum L and the line-of-sight
+        inclination             -- Inclination (in rad), defined as the angle between 
+                                   the orbital angular momentum L and the line-of-sight
         coa_phase               -- Coalesence phase of the binary (in rad)
         distance                -- Luminosity distance to the binary (in Mpc)
-        return_orbital_params   -- If True, returns the orbital evolution of all the orbital elements (in
-                                   geometrized units). Can also be a list of orbital variable names to return
-                                   only those specific variables. Available orbital variables names are:
+        return_orbital_params   -- If True, returns the orbital evolution of all the 
+                                   orbital elements (in geometrized units). Can also be 
+                                   a list of orbital variable names to return only 
+                                   those specific variables. Available orbital 
+                                   variables names are:
                                    ['x', 'e', 'l']
         return_pycbc_timeseries -- If True, returns data in the form of PyCBC timeseries.
                                    True by default
-        verbose                 -- Verbosity level. Available values are: 0, 1, 2
+        verbose                 -- Verbosity level. 
+                                   Available values are: 0, 1, 2
 
     Returns:
     --------
@@ -260,7 +257,6 @@ def get_imr_esigma_mode_sur(
     distance=1.0,
     coa_phase=None,
     include_conjugate_modes=False,
-    return_pycbc_timeseries=True,
     f_mr_transition=None,
     f_window_mr_transition=None,
     num_hyb_orbits=0.25,
@@ -280,8 +276,13 @@ def get_imr_esigma_mode_sur(
     -----------
         mass1, mass2              -- Binary's component masses (in solar masses)
         delta_t                   -- Waveform's time grid-spacing (in s)
-        reference_eccentricity  -- Eccentricity at reference time of surrogate
-        reference_mean_anomaly  -- Mean anomaly at reference time of surrogate (in rad)
+        reference_eccentricity    -- Eccentricity at reference time of surrogate
+        reference_mean_anomaly    -- Mean anomaly at reference time of surrogate (in rad)
+        t_start                   -- Start time of the waveform to be generated (in seconds).
+                                     Note that the surrogate defines t=0 at the end of 
+                                     inspiral, so t_start should be negative 
+                                     and t_start < 0.
+                                     Defaults to the full duration of the surrogate.
         coa_phase                 -- Coalesence phase of the binary (in rad)
         distance                  -- Luminosity distance to the binary (in Mpc)
         include_conjugate_modes   -- If True, (l, -|m|) modes are included as
@@ -613,11 +614,7 @@ eccentricity at the end of inspiral was {orbital_eccentricity[-1]}
         mode_to_align_by = list(modes_imr_numpy.keys())[0]
     idx_peak = len(modes_inspiral_numpy[mode_to_align_by]) - 1
     t_peak = idx_peak * delta_t
-    # # Align modes at peak of (2, 2) mode
-    # if mode_to_align_by not in modes_imr_numpy:
-    #     mode_to_align_by = list(modes_imr_numpy.keys())[0]
-    # idx_peak = abs(modes_imr_numpy[mode_to_align_by]).argmax()
-    # t_peak = idx_peak * delta_t
+
     itime = time.perf_counter()
     modes_imr = {}
     for el, em in modes_imr_numpy:

@@ -990,6 +990,7 @@ requested is {f_mr_transition}Hz, which should be less than the maximum freq of
             f_lower_mr *= 0.8
             continue
     # Extracting only the modes we need
+    modes_to_use = list(modes_inspiral_numpy.keys())
     modes_mr_numpy = {}
     while hlm_mr is not None:
         key = (hlm_mr.l, hlm_mr.m)

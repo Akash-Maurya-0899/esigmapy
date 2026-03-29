@@ -40,7 +40,7 @@ def get_inspiral_esigmasur_modes(
     verbose=False,
 ):
     """
-    Returns inspiral ESIGMA GW modes
+    Returns inspiral ESIGMASur GW modes
 
     Parameters:
     -----------
@@ -174,7 +174,7 @@ def get_inspiral_esigmasur_waveform(
     **kwargs,
 ):
     """
-    Returns inspiral ESIGMA GW polarizations
+    Returns inspiral ESIGMASur GW polarizations
 
     Parameters:
     -----------
@@ -268,7 +268,7 @@ Please set `return_pycbc_timeseries=False` if you want to provide custom time gr
         return hp, hc
     return t, hp, hc
 
-def get_imr_esigma_mode_sur(
+def get_imr_esigmasur_mode(
     mass1,
     mass2,
     delta_t,
@@ -287,10 +287,9 @@ def get_imr_esigma_mode_sur(
     return_hybridization_info=False,
     return_orbital_params=False,
     failsafe=True,
-    verbose=False,
-    remove_start_phase=True):
+    verbose=False):
     """
-    Returns IMR GW modes constructed using ESIGMA for inspiral and
+    Returns IMR GW modes constructed using ESIGMASur for inspiral and
     NRSur7dq4/SEOBNRv4PHM for merger-ringdown
 
     Parameters:
@@ -597,8 +596,9 @@ requested is {f_mr_transition}Hz, which should be less than the maximum freq of
         except:
             f_lower_mr *= 0.8
             continue
-
+        
     # Extracting only the modes we need
+    modes_to_use = list(modes_inspiral_numpy.keys())
     modes_mr_numpy = {}
     while hlm_mr is not None:
         key = (hlm_mr.l, hlm_mr.m)
@@ -660,3 +660,143 @@ eccentricity at the end of inspiral was {orbital_eccentricity[-1]}
     elif return_hybridization_info:
         return retval, modes_imr
     return modes_imr
+
+def get_imr_esigmasur_waveform(
+    mass1,
+    mass2,
+    delta_t,
+    reference_eccentricity=0.0,
+    reference_mean_anomaly=0.0,
+    t_start=None,
+    distance=1.0,
+    coa_phase=0.0,
+    inclination=0.0,
+    f_mr_transition=None,
+    f_window_mr_transition=None,
+    num_hyb_orbits=0.25,
+    blend_aligning_merger_to_inspiral=True,
+    keep_f_mr_transition_at_center=False,
+    merger_ringdown_approximant="NRSur7dq4",
+    return_hybridization_info=False,
+    return_orbital_params=False,
+    failsafe=True,
+    verbose=False):
+    """
+    Returns IMR GW polarizations constructed using hybridized IMR ESIGMASur modes
+
+    Parameters:
+    -----------
+        mass1, mass2              -- Binary's component masses (in solar masses)
+        delta_t                   -- Waveform's time grid-spacing (in s)
+        reference_eccentricity    -- Eccentricity at reference time of surrogate
+        reference_mean_anomaly    -- Mean anomaly at reference time of surrogate (in rad)
+        t_start                   -- Start time of the waveform to be generated (in seconds).
+                                     Note that the surrogate defines t=0 at the end of 
+                                     inspiral, so t_start should be negative 
+                                     and t_start < 0.
+                                     Defaults to the full duration of the surrogate.
+        distance                  -- Luminosity distance to the binary (in Mpc)
+        coa_phase                 -- Coalesence phase of the binary (in rad)
+        inclination               -- Inclination (in rad), defined as the angle
+                                     between the orbital angular momentum L and
+                                     the line-of-sight
+        f_mr_transition           -- Inspiral to merger transition GW frequency
+                                     (Hz). Should correspond to the mode
+                                     using which alignment is done, i.e. (2,2) mode here.
+                                     Defaults to the minimum of the Kerr and
+                                     Schwarzschild ISCO frequency equivalent
+                                     for the (2,2)-mode.
+        f_window_mr_transition    -- Hybridization frequency window (in Hz).
+                                     Should correspond to the mode
+                                     using which alignment is done, i.e. (2,2) mode here.
+                                     Disabled by the default value (None). In
+                                     such a case, the hybridization proceeds
+                                     over a window of `num_hyb_orbits` orbital
+                                     cycles (1 orbital cycle ~ 2 GW cycles)
+                                     that ends at the frequency value given by
+                                     `f_mr_transition`.
+                                     Also see `keep_f_mr_transition_at_center`
+                                     to choose the position of `f_mr_transition`
+                                     within this window.
+        num_hyb_orbits            -- number of orbital cycles to blend over.
+                                     Only used if f_window_mr_transition is not
+                                     specified.
+        blend_aligning_merger_to_inspiral -- (default: False) If True, the
+                                     merger-ringdown mode would be phase aligned
+                                     to the inspiral
+                                     If False, the inspiral is phase aligned
+                                     Note: specify the desired
+        keep_f_mr_transition_at_center -- If True, `f_mr_transition` is kept at
+                                     the center of the hybridization window.
+                                     Otherwise, it's kept at the end of the
+                                     window (default).
+        merger_ringdown_approximant    -- Choose merger-ringdown model. Tested
+                                     choices: [NRSur7dq4, SEOBNRv4PHM]
+        return_hybridization_info -- If True, returns hybridization related data
+        return_orbital_params     -- If True, returns the orbital evolution of
+                                     all the orbital elements (in
+                                     geometrized units). Can also be a list of
+                                     orbital variable names to return
+                                     only those specific variables. Available
+                                     orbital variables names are:
+                                    ['e', 'l', 'x'].
+                                     Note that these are available only for the
+                                     inspiral portion of the waveform!
+        failsafe                  -- If True, we make reasonable choices for the
+                                     user, if the inputs to this method lead
+                                     into exceptions.
+        verbose                   -- Verbosity level. Available values are: 0, 1, 2
+
+    Returns:
+    --------
+        hp, hc       -- Plus and cross IMR GW polarizations PyCBC TimeSeries
+        orbital_vars_dict -- Dictionary of evolution of orbital elements.
+                        Returned only if return_orbital_params is specified
+        retval       -- Hybridization related data.
+                        Returned only if return_hybridization_info is True
+    """  
+
+    retval = get_imr_esigmasur_mode(        
+        mass1=mass1,
+        mass2=mass2,
+        reference_eccentricity=reference_eccentricity,
+        reference_mean_anomaly=reference_mean_anomaly,
+        delta_t=delta_t,
+        t_start=t_start,
+        distance=distance,
+        coa_phase=coa_phase,
+        include_conjugate_modes=True,  # Always include conjugate modes while generating polarizations
+        f_mr_transition=f_mr_transition,
+        f_window_mr_transition=f_window_mr_transition,
+        num_hyb_orbits=num_hyb_orbits,
+        blend_aligning_merger_to_inspiral=blend_aligning_merger_to_inspiral,
+        keep_f_mr_transition_at_center=keep_f_mr_transition_at_center,
+        merger_ringdown_approximant=merger_ringdown_approximant,
+        return_hybridization_info=return_hybridization_info,
+        return_orbital_params=return_orbital_params,
+        failsafe=failsafe,
+        verbose=verbose,
+    )
+    if return_hybridization_info and return_orbital_params:
+        modes_imr, orbital_vars_dict, retval = retval
+    elif return_hybridization_info:
+        modes_imr, retval = retval
+    elif return_orbital_params:
+        modes_imr, orbital_vars_dict = retval
+    else:
+        modes_imr = retval
+
+    hp, hc = esigmapy.utils.get_polarizations_from_multipoles(
+        modes_imr,
+        inclination=inclination,
+        coa_phase=np.pi / 2 - coa_phase,
+        verbose=verbose,
+    )
+
+    if return_hybridization_info and return_orbital_params:
+        return hp, hc, orbital_vars_dict, retval
+    elif return_hybridization_info:
+        return hp, hc, retval
+    elif return_orbital_params:
+        return hp, hc, orbital_vars_dict
+    return hp, hc

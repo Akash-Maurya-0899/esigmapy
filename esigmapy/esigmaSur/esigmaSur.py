@@ -1,5 +1,6 @@
 # Copyright (C) 2026 Akash Maurya
-#
+
+"""ESIGMASur surrogate base evaluation code"""
 
 import os
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -68,6 +69,36 @@ class Surrogate:
         for data_piece_name in self.data_piece_names:
             self.eim_B[data_piece_name] = eim_B_dataset[f"eim_B_{data_piece_name}"]
         eim_B_dataset.close()
+        
+    def _set_time_range(self, M, times, t_start, t_end):
+        mass_scaling_factor = M/self.sur_total_mass
+        
+        t_min_sur = self.t_grid_sur[0] * mass_scaling_factor
+        t_max_sur = self.t_grid_sur[-1] * mass_scaling_factor
+        
+        if times is None:
+            if t_start is None:
+                t_start = t_min_sur
+            if t_end is None:
+                t_end = t_max_sur
+        else:
+            t_start = times[0]
+            t_end = times[-1]    
+        
+        if t_start < t_min_sur or t_end > t_max_sur:
+            raise ValueError(f"""Requested time range [{t_start:.2f}s, {t_end:.2f}s] is out of the surrogate's time range of [{t_min_sur:.2f}s, {t_max_sur:.2f}s] for the given total mass of {M:.2f} M_sun. 
+Please choose a time interval within these bounds.""")
+        
+        return t_start, t_end, mass_scaling_factor
+    
+    @staticmethod
+    def _find_conservative_starting_truncation_index(grid, val):
+        idx = np.searchsorted(grid, val, side='right') - 1
+        idx -= 5 # Leaving some buffer to avoid BC related problems in spline interpolation
+        # Checking if we even have data this deep in the starting
+        if idx < 0:
+            idx = 0 
+        return idx
 
 class CircularSurrogate(Surrogate):
     def __init__(self, data_dir):
@@ -96,30 +127,35 @@ class CircularSurrogate(Surrogate):
     def __call__(self, 
                  M, 
                  q, 
-                 delta_t, 
+                 delta_t=None, 
                  t_start=None, 
                  t_end=None,
+                 times=None,
                  remove_initial_phase=False, 
                  return_amp_phase_only=False):
         
-        q = _unwrap_single_float(q) # This is to ensure that q is a single value and not an array
-        mass_scaling_factor = M/self.sur_total_mass
+        if delta_t is None and times is None:
+            raise ValueError("Either delta_t or times must be provided.")
+
         t_grid_sur = self.t_grid_sur
-        if t_start is None:
-            t_start = t_grid_sur[0] * mass_scaling_factor
-        if t_end is None:
-            t_end = t_grid_sur[-1] *  mass_scaling_factor
         
-        start_idx = np.searchsorted(t_grid_sur, t_start/mass_scaling_factor, side='right') - 1
-        start_idx -= 5 # Leaving some buffer for no BC related problems in spline interpolation
-        # Checking if we even have data this deep in the starting
-        if start_idx < 0:
-            start_idx = 0
+        t_start, t_end, mass_scaling_factor = self._set_time_range(M=M,
+                                                                   times=times,
+                                                                   t_start=t_start, 
+                                                                   t_end=t_end)
+
+        start_idx = self._find_conservative_starting_truncation_index(grid=t_grid_sur, 
+                                                            val=t_start/mass_scaling_factor)
         t_grid_sur = t_grid_sur[start_idx: ] * mass_scaling_factor
-        
+
+        if times is None:
+            num_samples = int((t_end - t_start)/delta_t) + 1 
+            new_t_grid = t_start + np.arange(num_samples)*delta_t
+        else:
+            new_t_grid = times
+
+        q = _unwrap_single_float(q) # This is to ensure that q is a single value and not an array
         eta = eta_from_q(q)
-        num_samples = int((t_end - t_start)/delta_t) + 1 
-        new_t_grid = t_start + np.arange(num_samples)*delta_t
     
         amp_node_vals = self.fit["amp"](eta)
         phase_node_vals = self.fit["phase"](eta)
@@ -208,45 +244,41 @@ class EccentricSurrogate(Surrogate):
                 
         filepath = os.path.join(self.sur_dir, f"fits/mean_anomaly_offset-ref_space-3D-fit_spline.h5")
         fit = self.load_fit(filepath)
-        self.fit["mean_anomaly_offset_fit"] = [fit]
+        self.fit["mean_anomaly_offset_fit"] = [fit]        
         
     def __call__(self, 
                  M, 
                  params, 
-                 delta_t, 
+                 delta_t=None, 
                  t_start=None, 
                  t_end=None, 
+                 times=None,
                  remove_start_phase=True,
                  return_orbital_variables=False):
-                
-        q, e_ref, l_ref = params
-        mass_scaling_factor = M/self.sur_total_mass
+        
+        if delta_t is None and times is None:
+            raise ValueError("Either delta_t or times must be provided.")
         
         t_grid_sur = self.t_grid_sur # The native time grid of the surrogate
         l_grid_sur = self.l_grid_sur # The native shifted mean anomaly grid of the surrogate
         
-        t_min_sur = t_grid_sur[0] * mass_scaling_factor
-        t_max_sur = t_grid_sur[-1] * mass_scaling_factor
-        
-        if t_start is None:
-            t_start = t_min_sur
-        if t_end is None:
-            t_end = t_max_sur
-        
-        if t_start < t_min_sur or t_end > t_max_sur:
-            raise ValueError(f"""Requested time range [{t_start:.2f}s, {t_end:.2f}s] is out of bounds for the surrogate, which supports [{t_min_sur:.2f}s, {t_max_sur:.2f}s] for the given total mass of {M:.2f} M_sun. 
-Please choose a time range within these bounds.""")
-        
-        start_idx_t = np.searchsorted(t_grid_sur, t_start/mass_scaling_factor, side='right') - 1
-        start_idx_t -= 5 # Leaving some buffer for to avoid BC related problems in spline interpolation
-        # Checking if we even have data this deep in the starting
-        if start_idx_t < 0:
-            start_idx_t = 0 
+        t_start, t_end, mass_scaling_factor = self._set_time_range(M=M,
+                                                                   times=times,
+                                                                   t_start=t_start, 
+                                                                   t_end=t_end)
+
+        start_idx_t = self._find_conservative_starting_truncation_index(grid=t_grid_sur,        
+                                                              val=t_start/mass_scaling_factor) 
         t_grid_sur = t_grid_sur[start_idx_t: ] * mass_scaling_factor
 
+        if times is None:
+            num_samples = int((t_end - t_start)/delta_t) + 1 
+            new_t_grid = t_start + np.arange(num_samples)*delta_t
+        else:
+            new_t_grid = times
+
+        q, e_ref, l_ref = params
         eta = eta_from_q(q)
-        num_samples = int((t_end - t_start)/delta_t) + 1 
-        new_t_grid = t_start + np.arange(num_samples)*delta_t
 
         e_node_vals = np.asarray([self.fit["e"][i]([eta, e_ref, l_ref]) for i in range(len(self.fit["e"]))])
         e_eim_res_amp = self.norm_factor["e"]*np.dot(e_node_vals, self.eim_B["e"][:, self.ei_indices["res_amp"]])
@@ -257,7 +289,6 @@ Please choose a time range within these bounds.""")
         l_eim_res_amp = ( l_grid_sur[self.ei_indices["res_amp"]] + mean_anomaly_offset_of_shifted_mean_anomaly )%(2*np.pi)
         l_eim_res_phase = ( l_grid_sur[self.ei_indices["res_phase"]] + mean_anomaly_offset_of_shifted_mean_anomaly )%(2*np.pi)
 
-        
         res_amp_node_vals = np.asarray([self.fit["res_amp"][i]([eta, e_eim_res_amp[i], l_eim_res_amp[i]]) for i in range(len(self.fit["res_amp"]))])
         res_phase_node_vals = np.asarray([self.fit["res_phase"][i]([eta, e_eim_res_phase[i], l_eim_res_phase[i]]) for i in range(len(self.fit["res_phase"]))])
         res_circ_phase_node_vals = np.asarray([self.fit["res_circ_phase"][i]([eta, e_ref, l_ref]) for i in range(len(self.fit["res_circ_phase"]))])
@@ -266,11 +297,8 @@ Please choose a time range within these bounds.""")
         lt_relation = self.norm_factor["shifted_mean_anomaly"]*np.dot(shifted_mean_anomaly_node_vals, self.eim_B["shifted_mean_anomaly"][:, start_idx_t: ])
 
         l_start = lt_relation[0]
-        start_idx_l = np.searchsorted(l_grid_sur, l_start, side='right') - 1
-        start_idx_l -= 5 # Leaving some buffer for to avoid BC related problems in spline interpolation
-        # Checking if we even have data this deep in the starting
-        if start_idx_l < 0:
-            start_idx_l = 0 
+        start_idx_l = self._find_conservative_starting_truncation_index(grid=l_grid_sur,
+                                                              val=l_start)
         l_grid_sur = l_grid_sur[start_idx_l: ]
         
         delta_amp_native = self.norm_factor["res_amp"]*np.dot(res_amp_node_vals, self.eim_B["res_amp"][:, start_idx_l: ])
@@ -287,7 +315,8 @@ Please choose a time range within these bounds.""")
         amp0_, phase0_ = self.circ_sur(M=M, q=q, 
                                     delta_t=delta_t, 
                                     t_start=t_start, 
-                                    t_end=t_end, 
+                                    t_end=t_end,
+                                    times=new_t_grid, 
                                     remove_initial_phase=True, 
                                     return_amp_phase_only=True)
 

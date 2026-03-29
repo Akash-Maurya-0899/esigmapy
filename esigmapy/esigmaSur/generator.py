@@ -1,5 +1,5 @@
 # Copyright (C) 2026 Akash Maurya, Prayush Kumar
-#
+
 """Functions for generating ESIGMASur waveforms"""
 
 from __future__ import absolute_import
@@ -27,9 +27,10 @@ def get_surrogate_object():
 def get_inspiral_esigmasur_modes(
     mass1,
     mass2,
-    delta_t,
     reference_eccentricity=0.0,
     reference_mean_anomaly=0.0,
+    delta_t=None,
+    times=None,
     t_start=None,
     t_end=None,
     distance=1.0,
@@ -99,6 +100,7 @@ def get_inspiral_esigmasur_modes(
                             delta_t = delta_t, 
                             t_start=t_start, 
                             t_end=t_end, 
+                            times=times,
                             remove_start_phase=True,
                             return_orbital_variables=return_orbital_params)
     
@@ -114,15 +116,18 @@ def get_inspiral_esigmasur_modes(
             modes[(el, -em)] = (-1)**el * np.conjugate(modes[(el, em)])
 
     if return_pycbc_timeseries:
-        modes = {
-            k: pt.TimeSeries(
-                modes[k],
-                delta_t=delta_t,
-                epoch=-delta_t * (len(modes[k])-1),
-            )
-            for k in modes
-        }
-
+        if times is None:
+            modes = {
+                k: pt.TimeSeries(
+                    modes[k],
+                    delta_t=delta_t,
+                    epoch=-delta_t * (len(modes[k])-1),
+                )
+                for k in modes
+            }
+        else:
+            raise ValueError("""Cannot return PyCBC TimeSeries when the user provides custom time grid via `times` due to the possibilty of it being a non-uniform time-grid. 
+Please set `return_pycbc_timeseries=False` if you want to provide custom time grid.""")
     if verbose:
         print(f"Modes generation took: {time.perf_counter() - itime} seconds")
 
@@ -132,6 +137,9 @@ def get_inspiral_esigmasur_modes(
             return_orbital_params = orbital_var_names
 
         if return_pycbc_timeseries:
+            # No need to check and raise error here if `times` is provided, 
+            # because the error will be raised while trying to convert modes
+            # to PyCBC TimeSeries above. 
             for name in return_orbital_params:
                 exec(
                     f"orbital_var_dict['{name}'] = pt.TimeSeries(orb_vars['{name}'], delta_t=delta_t, epoch=-delta_t * (len(orb_vars['{name}'])-1))"
@@ -151,11 +159,12 @@ def get_inspiral_esigmasur_modes(
 def get_inspiral_esigmasur_waveform(
     mass1,
     mass2,
-    delta_t,
     reference_eccentricity=0.0,
     reference_mean_anomaly=0.0,
+    delta_t=None,
     t_start=None,
     t_end=None,
+    times=None,
     inclination=0.0,
     coa_phase=0.0,
     distance=1.0,
@@ -170,15 +179,22 @@ def get_inspiral_esigmasur_waveform(
     Parameters:
     -----------
         mass1, mass2            -- Binary's component masses (in solar masses)
-        delta_t                 -- Waveform's time grid-spacing (in s)
+        reference_eccentricity  -- Eccentricity at reference time of surrogate
+        reference_mean_anomaly  -- Mean anomaly at reference time of surrogate (in rad)        
+        delta_t                 -- Waveform's time grid-spacing (in s).
+                                   Can be omitted if providing custom time grid via 
+                                   `times` argument. 
         t_start, t_end          -- Start and end times of the waveform 
                                    to be generated (in seconds).
                                    Note that the surrogate defines t=0 at the end of 
                                    inspiral, so t_start and t_end should be negative 
                                    and t_start < t_end <= 0.
                                    Defaults to the full duration of the surrogate.
-        reference_eccentricity  -- Eccentricity at reference time of surrogate
-        reference_mean_anomaly  -- Mean anomaly at reference time of surrogate (in rad)        
+        times                   -- Custom time grid (can be non-uniform) on which the 
+                                   waveform should be generated. Should be a numpy 
+                                   array of time values in seconds. 
+                                   If provided, `delta_t`, `t_start` and `t_end` are ignored.
+                                   Also set `return_pycbc_timeseries=False` to use this option.
         inclination             -- Inclination (in rad), defined as the angle between 
                                    the orbital angular momentum L and the line-of-sight
         coa_phase               -- Coalesence phase of the binary (in rad)
@@ -190,7 +206,7 @@ def get_inspiral_esigmasur_waveform(
                                    variables names are:
                                    ['x', 'e', 'l']
         return_pycbc_timeseries -- If True, returns data in the form of PyCBC timeseries.
-                                   True by default
+                                    True by default. Set to False if you want to provide custom time grid via `times` argument, or if you want the output in numpy arrays.
         verbose                 -- Verbosity level. 
                                    Available values are: 0, 1, 2
 
@@ -211,6 +227,7 @@ def get_inspiral_esigmasur_waveform(
         t_start=t_start,
         t_end=t_end,
         delta_t=delta_t,
+        times=times,
         distance=distance,
         include_conjugate_modes=True,  # Always include conjugate modes while generating polarizations
         return_orbital_params=return_orbital_params,
@@ -231,8 +248,12 @@ def get_inspiral_esigmasur_waveform(
     )
 
     if return_pycbc_timeseries:
-        hp = pt.TimeSeries(hp, delta_t=delta_t, epoch=-delta_t * (len(hp)-1))
-        hc = pt.TimeSeries(hc, delta_t=delta_t, epoch=-delta_t * (len(hc)-1))
+        if times is None:
+            hp = pt.TimeSeries(hp, delta_t=delta_t, epoch=-delta_t * (len(hp)-1))
+            hc = pt.TimeSeries(hc, delta_t=delta_t, epoch=-delta_t * (len(hc)-1))
+        else:
+            raise ValueError("""Cannot return PyCBC TimeSeries when the user provides custom time grid via `times` due to the possibilty of it being a non-uniform time-grid. 
+Please set `return_pycbc_timeseries=False` if you want to provide custom time grid.""") 
 
     if return_orbital_params:
         if return_pycbc_timeseries:
@@ -240,7 +261,7 @@ def get_inspiral_esigmasur_waveform(
                 exec(
                     f"orbital_var_dict['{name}'] = pt.TimeSeries(orbital_var_dict['{name}'], delta_t=delta_t, epoch=-delta_t * (len(orbital_var_dict['{name}'])-1))"
                 )
-            return orbital_var_dict, hp, hc
+            return orbital_var_dict, hp, hc       
         return t, orbital_var_dict, hp, hc
 
     if return_pycbc_timeseries:
@@ -577,12 +598,13 @@ requested is {f_mr_transition}Hz, which should be less than the maximum freq of
             f_lower_mr *= 0.8
             continue
 
-    modes_mr = {}
+    # Extracting only the modes we need
+    modes_mr_numpy = {}
     while hlm_mr is not None:
-        modes_mr[(hlm_mr.l, hlm_mr.m)] = hlm_mr.mode
+        key = (hlm_mr.l, hlm_mr.m)
+        if key in modes_to_use:
+            modes_mr_numpy[key] = hlm_mr.mode.data.data
         hlm_mr = hlm_mr.next
-
-    modes_mr_numpy = {k: np.asarray(modes_mr[k].data.data) for k in modes_mr}
 
     try:
         retval = esigmapy.blend.blend_modes(

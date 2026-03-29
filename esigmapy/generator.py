@@ -989,13 +989,13 @@ requested is {f_mr_transition}Hz, which should be less than the maximum freq of
         except:
             f_lower_mr *= 0.8
             continue
-
-    modes_mr = {}
+    # Extracting only the modes we need
+    modes_mr_numpy = {}
     while hlm_mr is not None:
-        modes_mr[(hlm_mr.l, hlm_mr.m)] = hlm_mr.mode
+        key = (hlm_mr.l, hlm_mr.m)
+        if key in modes_to_use:
+            modes_mr_numpy[key] = hlm_mr.mode.data.data
         hlm_mr = hlm_mr.next
-
-    modes_mr_numpy = {k: np.asarray(modes_mr[k].data.data) for k in modes_mr}
 
     try:
         retval = esigmapy.blend.blend_modes(
@@ -1042,7 +1042,7 @@ eccentricity at the end of inspiral was {orbital_eccentricity[-1]}
         )
 
     if verbose:
-        print("blendd.")
+        print("blended.")
 
     if return_hybridization_info and return_orbital_params_user:
         return modes_imr, orbital_vars_dict, retval

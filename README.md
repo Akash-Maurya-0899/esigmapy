@@ -21,8 +21,8 @@ The full IMR waveform `ESIGMAHM` is then produced by smoothly attaching the insp
   git checkout ESIGMAHMv1
   ``` 
 * **Installing the code:**
-  - It is advised to create a conda environment using [`igwn`](https://computing.docs.ligo.org/conda/environments/igwn-py311/) and then install LALSuite inside it. This will minimize the dependency issue. Additionally, if you get an error related to `haswell` then please comment out or remove `- _x86_64-microarch-level=3=3_haswell` from the `.yaml` file.  
-  - Activate your `conda` environment. Make sure that the `swig` version in this environment is below `4.2.1` (you can check this by running `conda list swig`). If not, install its version `4.0.2` by running `conda install -c conda-forge swig=4.0.2`. 
+  - It is advised to create a conda environment using [the `igwn` yaml file](https://computing.docs.ligo.org/conda/environments/igwn-py311/) and install the above mentioned fork of `LALSuite` inside it to minimize the dependency issues. Please remove `_x86_64-microarch-level=3=3_haswell` from the yaml file in case you get errors related to microarchitecture mismatch.  
+  - Activate your `conda` environment. Make sure that the `swig` version in this environment is below `4.2.1` (you can check this by running `conda list swig`). If not, install its version `4.2.0` by running `conda install -c conda-forge swig=4.2.0`. 
   - Now choose/create a directory where you want to install ESIGMA. Let the absolute path of this directory be `/path/to/esigmahm`.
   - Go back inside the above cloned `LALSuite` fork, and sequentially run the following commands: 
     
@@ -40,7 +40,7 @@ The full IMR waveform `ESIGMAHM` is then produced by smoothly attaching the insp
     ```
 
 ## Installing `NRSur7dq4`
-* Download the `NRSur7dq4` [data file](https://git.ligo.org/lscsoft/lalsuite-extra/-/blob/master/data/lalsimulation/NRSur7dq4.h5) in some directory. Let's say the absolute path to this directory is `/path/to/NRSur7dq4`.
+* Download the `NRSur7dq4` [data file](https://git.ligo.org/lscsoft/lalsuite-extra/-/blob/master/data/lalsimulation/NRSur7dq4.h5) in some directory (for `LALSuite` versions >= 7.25, download [this data file](https://git.ligo.org/waveforms/software/lalsuite-waveform-data/-/blob/main/waveform_data/NRSur7dq4_v1.0.h5?ref_type=heads) instead). Let's say the absolute path to this directory is `/path/to/NRSur7dq4`.
 * Append the path of this directory to the shell environment variable `LAL_DATA_PATH` by running: `export LAL_DATA_PATH="$LAL_DATA_PATH:/path/to/NRSur7dq4"`
 * To avoid performing the above step in every new terminal session, either add the above command to your `.bashrc` file, or follow the instructions [here](http://gitlab.icts.res.in/akash.maurya/Installation-instructions/wikis/conda-tricks), replacing `PYTHONPATH` with `LAL_DATA_PATH`, to set this environment variable automatically on activating your `conda` environment.
 
@@ -51,9 +51,8 @@ The full IMR waveform `ESIGMAHM` is then produced by smoothly attaching the insp
 ## Trying out `ESIGMAHM`
 If everything goes fine, you should be able to generate `ESIGMAHM` waveforms. The instructions to do so and the various functionalities that `ESIGMAHM` offers are detailed in [this tutorial notebook](https://github.com/gwnrtools/esigmapy/blob/master/notebooks/ESIGMA_generation.ipynb). 
 
-***
-## Trying out `ESIGMAHM` via gwsignal
-`ESIGMAHM` can now be accessed via [`gwsignal`](https://waveforms.docs.ligo.org/reviews/lalsuite/lalsimulation/gwsignal/index.html). [This tutorial notebook](https://github.com/gwnrtools/esigmapy/blob/cfe881a6052f1e9a7c3e066d9fd32462a3af2c89/notebooks/esigma_gwsignal.ipynb) shows how to use `ESIGMAHM` waveforms via `gwsignal`. 
+![NEW](https://img.shields.io/static/v1?label=&message=NEW&color=brightgreen) 
+`ESIGMAHM` can now also be accessed via [`gwsignal`](https://waveforms.docs.ligo.org/reviews/lalsuite/lalsimulation/gwsignal/index.html). See [this notebook](https://github.com/gwnrtools/esigmapy/blob/cfe881a6052f1e9a7c3e066d9fd32462a3af2c89/notebooks/esigma_gwsignal.ipynb) for usage instructions.
 
 ***
 ## Citation

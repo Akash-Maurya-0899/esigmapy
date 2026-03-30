@@ -86,7 +86,7 @@ class Surrogate:
             t_end = times[-1]    
         
         if t_start < t_min_sur or t_end > t_max_sur:
-            raise ValueError(f"""Requested time range [{t_start:.2f}s, {t_end:.2f}s] is out of the surrogate's time range of [{t_min_sur:.2f}s, {t_max_sur:.2f}s] for the given total mass of {M:.2f} M_sun. 
+            raise ValueError(f"""Requested time range [{t_start}s, {t_end}s] is out of the surrogate's time range of [{t_min_sur}s, {t_max_sur}s] for the given total mass of {M:.2f} M_sun. 
 Please choose a time interval within these bounds.""")
         
         return t_start, t_end, mass_scaling_factor
@@ -132,7 +132,8 @@ class CircularSurrogate(Surrogate):
                  t_end=None,
                  times=None,
                  remove_initial_phase=False, 
-                 return_amp_phase_only=False):
+                 return_amp_phase_only=False,
+                 return_orbital_variables=False):
         
         if delta_t is None and times is None:
             raise ValueError("Either delta_t or times must be provided.")
@@ -173,6 +174,22 @@ class CircularSurrogate(Surrogate):
         if return_amp_phase_only:
             return amp, phase
         
+        if return_orbital_variables:
+            raise NotImplementedError("Orbital variable reconstruction is not implemented for the circular surrogate, as the circular surrogate is only built to model the waveform and not the orbital variables. Please use the eccentric surrogate for orbital variable reconstruction.")
+            # e = np.zeros(len(new_t_grid))
+            
+            # l_node_vals = self.fit["l"](eta)
+            # l_native = self.norm_factor["l"]*np.dot(l_node_vals, self.eim_B["l"][:, start_idx: ])
+            # l = np.interp(new_t_grid, t_grid_sur, l_native)
+            # l -= 2*np.pi*np.floor(l[0]/(2*np.pi)) # Bringing starting value of mean anomaly in [0, 2pi)
+                    
+            # x_node_vals = self.fit["x"](eta)
+            # x_native = self.norm_factor["x"]*np.dot(x_node_vals, self.eim_B["x"][:, start_idx: ])
+            # x = np.interp(new_t_grid, t_grid_sur, x_native)
+            
+            # orb_vars = {"e": e, "l": l, "x": x}
+            return new_t_grid, orb_vars, mode_from_amp_phase(amp, phase)
+        
         return new_t_grid, mode_from_amp_phase(amp, phase)
 
 class EccentricSurrogate(Surrogate):
@@ -189,6 +206,22 @@ class EccentricSurrogate(Surrogate):
         self.load_eim_B_matrices()
         self.load_ei_indices()
         self.load_param_space_fits(verbose=verbose)
+        
+        self.q_min = 1.
+        self.q_max = 6.
+        self.e_ref_min = 5.e-7 # The TPI fits below this value fail to evaluate
+        self.e_ref_max = 0.431
+        self.l_ref_min = 0.
+        self.l_ref_max = 2*np.pi
+
+    def check_param_range(self, q, e_ref, l_ref, override=False):
+        if not override:
+            if not (self.q_min <= q <= self.q_max):
+                raise ValueError(f"Mass ratio q={q} is out of range [{self.q_min}, {self.q_max}]. Please choose a value within this range.")
+            if not (0. <= e_ref <= self.e_ref_max):
+                raise ValueError(f"Reference eccentricity e_ref={e_ref} is out of range [{0.}, {self.e_ref_max}]. Please choose a value within this range.")
+            if not (self.l_ref_min <= l_ref <= self.l_ref_max):
+                raise ValueError(f"Reference mean anomaly l_ref={l_ref} is out of range [{self.l_ref_min}, {self.l_ref_max}]. Please choose a value within this range.")
 
     def load_sur_metadata(self):
         self.sur_total_mass, self.t_ref, self.t_grid_sur, self.l_grid_sur = self.get_metadata(["M", "t_ref", "t_grid_sur", "l_grid_sur"])
@@ -278,6 +311,25 @@ class EccentricSurrogate(Surrogate):
             new_t_grid = times
 
         q, e_ref, l_ref = params
+        self.check_param_range(q=q, e_ref=e_ref, l_ref=l_ref)
+        
+        if e_ref > self.e_ref_min:
+            amp0_, phase0_ = self.circ_sur(M=M, q=q, 
+                            delta_t=delta_t, 
+                            t_start=t_start, 
+                            t_end=t_end,
+                            times=new_t_grid, 
+                            remove_initial_phase=True, 
+                            return_amp_phase_only=True,
+                            return_orbital_variables=False)
+        else:
+            return self.circ_sur(M=M, q=q, 
+                            delta_t=delta_t, 
+                            t_start=t_start, 
+                            t_end=t_end,
+                            times=new_t_grid, 
+                            remove_initial_phase=True, 
+                            return_orbital_variables=return_orbital_variables)
         eta = eta_from_q(q)
 
         e_node_vals = np.asarray([self.fit["e"][i]([eta, e_ref, l_ref]) for i in range(len(self.fit["e"]))])
@@ -311,15 +363,6 @@ class EccentricSurrogate(Surrogate):
         res_circ_phi = np.interp(l_s, l_grid_sur, res_circ_phase_native)
 
         delta_A *= mass_scaling_factor/_amp_correction_factor
-            
-        amp0_, phase0_ = self.circ_sur(M=M, q=q, 
-                                    delta_t=delta_t, 
-                                    t_start=t_start, 
-                                    t_end=t_end,
-                                    times=new_t_grid, 
-                                    remove_initial_phase=True, 
-                                    return_amp_phase_only=True)
-
         amp = amp0_ + delta_A
         phase = phase0_ + res_circ_phi + delta_phi
         if remove_start_phase:

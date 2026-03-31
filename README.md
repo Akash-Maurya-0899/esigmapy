@@ -79,7 +79,7 @@ If everything goes fine, you should be able to generate `ESIGMAHM` waveforms. Th
 * You also need to download the surrogate data files of `ESIGMASur`, which can be found [here](https://github.com/Akash-Maurya-0899/esigmapy/tree/surrogate/esigmapy/esigmaSur/data) on the repo. Akin to `NRSur7dq4` installation instructions above, please set the shell environment variable `ESIGMASUR_DATA_PATH` to the directory where you keep these surrogate data files by running: `export ESIGMASUR_DATA_PATH="/path/to/ESIGMASur"`. 
 
 ### Trying out `ESIGMASur`
-The usage instructions and the various functionalities of `ESIGMASur` are detailed in [this tutorial notebook](https://github.com/Akash-Maurya-0899/esigmapy/blob/surrogate/notebooks/EsigmaSur_generation.ipynb).
+The usage instructions and the various functionalities of `ESIGMASur` are detailed in [this tutorial notebook](https://github.com/Akash-Maurya-0899/esigmapy/blob/surrogate/notebooks/ESIGMASur_generation.ipynb).
 
 ## Citation
 If you use `ESIGMAHM` in your work, please consider citing: 

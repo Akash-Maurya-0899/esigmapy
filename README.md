@@ -1,30 +1,43 @@
-# ESIGMAPy: a Python package to generate `ESIGMAHM` waveforms
+# ESIGMAPy: a Python package to generate `ESIGMA` waveforms
+
+`ESIGMAPy` provides access to two waveform models:
+
+| Model | Description |
+|---|---|
+| `ESIGMAHM` | Eccentric, aligned-spin IMR waveform with higher modes (arXiv:[2409.13866](https://arxiv.org/abs/2409.13866)) |
+| `ESIGMASur` | Surrogate model for fast `InspiralESIGMA` waveform generation (arXiv:[2510.00116](https://arxiv.org/abs/2510.00116))|
+
+---
+
+## :blue_square: ESIGMAHM
 
 `ESIGMAHM` is an eccentric, aligned-spin, inspiral-merger-ringdown (IMR) waveform model with higher-order modes. It is composed of two pieces:
 
-* **Inspiral piece (called `InspiralESIGMAHM`):** The inspiral piece comes from a combination of post-Newtonian theory, self-force, and black hole perturbation theory. It is currently implemented in a [private fork](https://git.ligo.org/kaushik.paul/lalsuite/-/tree/enigma_spins_v2023?ref_type=heads) of `LALSuite` (interested users are welcome to write to the developers for access at esigmahm@icts.res.in).  
-* **Plunge-merger-ringdown piece**: Assuming moderate starting eccentricities that will decay by the late inspiral, we use the quasi-circular NR surrogate `NRSur7dq4` for the plunge-merger-ringdown piece for `ESIGMAHM`. This requires the `NRSur7dq4`'s [data file](https://git.ligo.org/lscsoft/lalsuite-extra/-/blob/master/data/lalsimulation/NRSur7dq4.h5) to be downloaded. 
+* **Inspiral piece (`InspiralESIGMAHM`):** It comes from a combination of post-Newtonian theory, self-force, and black hole perturbation theory.
+* **Plunge-merger-ringdown piece**: Assuming moderate starting eccentricities that decay by the late inspiral, we use the quasi-circular (QC) NR surrogate `NRSur7dq4` for the plunge-merger-ringdown piece for `ESIGMAHM`.
+  
+  (_Note:_ We also allow other QC `LALSuite` waveform models to be used as the plunge-merger-ringdown piece; see the optional argument `merger_ringdown_approximant` in the generation functions `get_imr_esigma_waveform` and `get_imr_esigma_modes` [here](https://github.com/gwnrtools/esigmapy/blob/master/esigmapy/generator.py). However, the default and the most tested choice is `NRSur7dq4`.)
 
-  (_Note:_ We also allow other `LALSuite` waveform models to be used as the plunge-merger-ringdown piece; see the optional argument `merger_ringdown_approximant` in the generation functions `get_imr_esigma_waveform` and `get_imr_esigma_modes` [here](https://github.com/gwnrtools/esigmapy/blob/master/esigmapy/generator.py). However, the default and the most tested choice is `NRSur7dq4`)
+The full IMR waveform `ESIGMAHM` is produced by smoothly attaching the inspiral piece `InspiralESIGMAHM` to the plunge-merger-ringdown piece `NRSur7dq4`. This attachment is facilitated by `ESIGMAPy`.
 
-The full IMR waveform `ESIGMAHM` is then produced by smoothly attaching the inspiral piece `InspiralESIGMAHM` to the plunge-merger-ringdown piece `NRSur7dq4`. This attachment is done via `ESIGMAPy`.
+Using `ESIGMAHM` therefore requires installing 1. `InspiralESIGMAHM`, 2. `NRSur7dq4`, and 3. `ESIGMAPy`.
 
-## Installing `InspiralESIGMAHM`
+### Installing `InspiralESIGMAHM`
 
 * **Getting the source code:** The `LALSuite` fork containing the implementation of `InspiralESIGMAHM` is currently private, but interested users are welcome to write to the developers for access at esigmahm@icts.res.in. 
 
-  Clone this [`LALSuite` fork](https://git.ligo.org/kaushik.paul/lalsuite/-/tree/enigma_spins_v2023?ref_type=heads) and checkout the relevant commit identified by the tag `ESIGMAHMv1` which contains the current stable implementation of the inspiral piece of `ESIGMAHM`.
+  Clone the [`LALSuite` fork](https://git.ligo.org/kaushik.paul/lalsuite/-/tree/enigma_spins_v2023?ref_type=heads) and checkout the commit with tag `ESIGMAHMv1`:
 
   ```
   git clone https://git.ligo.org/kaushik.paul/lalsuite.git
   cd lalsuite
   git checkout ESIGMAHMv1
   ``` 
-* **Installing the code:**
+* **Installation:**
   - It is advised to create a conda environment using [the `igwn` yaml file](https://computing.docs.ligo.org/conda/environments/igwn-py311/) and install the above mentioned fork of `LALSuite` inside it to minimize the dependency issues. Please remove `_x86_64-microarch-level=3=3_haswell` from the yaml file in case you get errors related to microarchitecture mismatch.  
   - Activate your `conda` environment. Make sure that the `swig` version in this environment is below `4.2.1` (you can check this by running `conda list swig`). If not, install its version `4.2.0` by running `conda install -c conda-forge swig=4.2.0`. 
-  - Now choose/create a directory where you want to install ESIGMA. Let the absolute path of this directory be `/path/to/esigmahm`.
-  - Go back inside the above cloned `LALSuite` fork, and sequentially run the following commands: 
+  - Create a directory where you want to install ESIGMA. Let the absolute path of this directory be `/path/to/esigmahm`.
+  - Go back inside the above cloned `LALSuite` fork, and run the following commands: 
     
     ```
     ./00boot
@@ -39,24 +52,37 @@ The full IMR waveform `ESIGMAHM` is then produced by smoothly attaching the insp
     ln -s /path/to/esigmahm/etc/lalsuite-user-env.sh
     ```
 
-## Installing `NRSur7dq4`
+### Installing `NRSur7dq4`
 * Download the `NRSur7dq4` [data file](https://git.ligo.org/lscsoft/lalsuite-extra/-/blob/master/data/lalsimulation/NRSur7dq4.h5) in some directory (for `LALSuite` versions >= 7.25, download [this data file](https://git.ligo.org/waveforms/software/lalsuite-waveform-data/-/blob/main/waveform_data/NRSur7dq4_v1.0.h5?ref_type=heads) instead). Let's say the absolute path to this directory is `/path/to/NRSur7dq4`.
 * Append the path of this directory to the shell environment variable `LAL_DATA_PATH` by running: `export LAL_DATA_PATH="$LAL_DATA_PATH:/path/to/NRSur7dq4"`
 * To avoid performing the above step in every new terminal session, either add the above command to your `.bashrc` file, or follow the instructions [here](http://gitlab.icts.res.in/akash.maurya/Installation-instructions/wikis/conda-tricks), replacing `PYTHONPATH` with `LAL_DATA_PATH`, to set this environment variable automatically on activating your `conda` environment.
 
-## Installing `ESIGMAPy`
+### Installing `ESIGMAPy`
 * Activate your `conda` environment and install `ESIGMAPy` by running: `pip install esigmapy`.
 
 ***
-## Trying out `ESIGMAHM`
+### Trying out `ESIGMAHM`
 If everything goes fine, you should be able to generate `ESIGMAHM` waveforms. The instructions to do so and the various functionalities that `ESIGMAHM` offers are detailed in [this tutorial notebook](https://github.com/gwnrtools/esigmapy/blob/master/notebooks/ESIGMA_generation.ipynb). 
 
-![NEW](https://img.shields.io/static/v1?label=&message=NEW&color=brightgreen) 
+### Trying out `ESIGMAHM` via `gwsignal` 
 `ESIGMAHM` can now also be accessed via [`gwsignal`](https://waveforms.docs.ligo.org/reviews/lalsuite/lalsimulation/gwsignal/index.html). See [this notebook](https://github.com/gwnrtools/esigmapy/blob/cfe881a6052f1e9a7c3e066d9fd32462a3af2c89/notebooks/esigma_gwsignal.ipynb) for usage instructions.
 
 ***
+
+## :green_square: ESIGMASur
+
+`ESIGMASur` is a fast time-domain surrogate model of `InspiralESIGMA`: the inspiral (2,2)-mode of `ESIGMAHM`.
+
+### Installing `ESIGMASur`
+* Install `ESIGMAPy` by running: `pip install esigmapy`.
+  It **does not** require the custom LALSuite installation, NR surrogate data file, or any additional configuration above.
+* You also need to download the surrogate data files of `ESIGMASur`, which can be found [here](https://github.com/Akash-Maurya-0899/esigmapy/tree/surrogate/esigmapy/esigmaSur/data) on the repo. Akin to `NRSur7dq4` installation instructions above, please set the shell environment variable `ESIGMASUR_DATA_PATH` to the directory where you keep these surrogate data files by running: `export ESIGMASUR_DATA_PATH="/path/to/ESIGMASur"`. 
+
+### Trying out `ESIGMASur`
+The usage instructions and the various functionalities of `ESIGMASur` are detailed in [this tutorial notebook](https://github.com/Akash-Maurya-0899/esigmapy/blob/surrogate/notebooks/EsigmaSur_generation.ipynb).
+
 ## Citation
-If you use `ESIGMAHM` in your work, please consider citing it: 
+If you use `ESIGMAHM` in your work, please consider citing: 
 
 Paul et. al., _"ESIGMAHM: An Eccentric, Spinning inspiral-merger-ringdown waveform model with Higher Modes for the detection and characterization of binary black holes"_, [PhysRevD.111.084074](https://journals.aps.org/prd/abstract/10.1103/PhysRevD.111.084074), arXiv:[2409.13866](https://arxiv.org/abs/2409.13866) (2024)
 ```
@@ -75,6 +101,21 @@ Paul et. al., _"ESIGMAHM: An Eccentric, Spinning inspiral-merger-ringdown wavefo
 }
 ```
 `ESIGMAHM` is built on the `ENIGMA` framework, which was developed in arXiv:[1609.05933](https://arxiv.org/abs/1609.05933), arXiv:[1711.06276](https://arxiv.org/abs/1711.06276), arXiv:[2008.03313](https://arxiv.org/abs/2008.03313). In addition to citing `ESIGMAHM`, please consider citing these works related to `ENIGMA` as well. 
+
+If you use `ESIGMASur` in your work, please consider citing:
+
+Maurya et. al., _"Chase Orbits, not Time: A Scalable Paradigm for Long-Duration Eccentric Gravitational-Wave Surrogates"_, arXiv:[2510.00116](https://arxiv.org/abs/2510.00116) (2025)
+```
+@article{Maurya:2025shc,
+    author = "Maurya, Akash and Kumar, Prayush and Field, Scott E. and Mishra, Chandra Kant and Nee, Peter James and Paul, Kaushik and Pfeiffer, Harald P. and Ravichandran, Adhrit and Varma, Vijay",
+    title = "{Chase Orbits, not Time: A Scalable Paradigm for Long-Duration Eccentric Gravitational-Wave Surrogates}",
+    eprint = "2510.00116",
+    archivePrefix = "arXiv",
+    primaryClass = "gr-qc",
+    month = "9",
+    year = "2025"
+}
+```
 
 ***
 ## 📬 Contact Us  

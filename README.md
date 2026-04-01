@@ -1,6 +1,6 @@
 # ESIGMAPy: a Python package to generate `ESIGMA` waveforms
 
-`ESIGMAPy` provides access to two waveform models:
+`ESIGMAPy` provides access to two eccentric waveform models:
 
 | Model | Description |
 |---|---|
@@ -9,6 +9,21 @@
 
 ---
 
+## :rocket: Quick Start
+
+Install directly from PyPI:
+
+```bash
+pip install esigmapy
+```
+Then to use:
+ * `ESIGMAHM`: requires custom `LALSuite` installation and `NRSur7dq4` surrogate data download ([see below](https://github.com/Akash-Maurya-0899/esigmapy/edit/surrogate/README.md#blue_square-esigmahm)).
+ * `ESIGMASur`: requires downloading `ESIGMASur` surrogate data ([see below](https://github.com/Akash-Maurya-0899/esigmapy/edit/surrogate/README.md#green_square-esigmasur))
+ 
+Usage instructions at:
+ * `ESIGMAHM` [tutorial notebook](https://github.com/gwnrtools/esigmapy/blob/master/notebooks/ESIGMA_generation.ipynb)
+ * `ESIGMASur` [tutorial notebook](https://github.com/Akash-Maurya-0899/esigmapy/blob/surrogate/notebooks/ESIGMASur_generation.ipynb)
+
 ## :blue_square: ESIGMAHM
 
 `ESIGMAHM` is an eccentric, aligned-spin, inspiral-merger-ringdown (IMR) waveform model with higher-order modes. It is composed of two pieces:
@@ -16,7 +31,7 @@
 * **Inspiral piece (`InspiralESIGMAHM`):** It comes from a combination of post-Newtonian theory, self-force, and black hole perturbation theory.
 * **Plunge-merger-ringdown piece**: Assuming moderate starting eccentricities that decay by the late inspiral, we use the quasi-circular (QC) NR surrogate `NRSur7dq4` for the plunge-merger-ringdown piece for `ESIGMAHM`.
   
-  (_Note:_ We also allow other QC `LALSuite` waveform models to be used as the plunge-merger-ringdown piece; see the optional argument `merger_ringdown_approximant` in the generation functions `get_imr_esigma_waveform` and `get_imr_esigma_modes` [here](https://github.com/gwnrtools/esigmapy/blob/master/esigmapy/generator.py). However, the default and the most tested choice is `NRSur7dq4`.)
+  (**Note:** We also allow other QC `LALSuite` waveform models to be used as the plunge-merger-ringdown piece; see the optional argument `merger_ringdown_approximant` in the generation functions `get_imr_esigma_waveform` and `get_imr_esigma_modes` [here](https://github.com/gwnrtools/esigmapy/blob/master/esigmapy/generator.py). However, the default and the most tested choice is `NRSur7dq4`.)
 
 The full IMR waveform `ESIGMAHM` is produced by smoothly attaching the inspiral piece `InspiralESIGMAHM` to the plunge-merger-ringdown piece `NRSur7dq4`. This attachment is facilitated by `ESIGMAPy`.
 
@@ -62,7 +77,7 @@ Using `ESIGMAHM` therefore requires installing 1. `InspiralESIGMAHM`, 2. `NRSur7
 
 ***
 ### Trying out `ESIGMAHM`
-If everything goes fine, you should be able to generate `ESIGMAHM` waveforms. The instructions to do so and the various functionalities that `ESIGMAHM` offers are detailed in [this tutorial notebook](https://github.com/gwnrtools/esigmapy/blob/master/notebooks/ESIGMA_generation.ipynb). 
+The instructions to generate `ESIGMAHM` waveforms and the various functionalities that it offers are detailed in [this tutorial notebook](https://github.com/gwnrtools/esigmapy/blob/master/notebooks/ESIGMA_generation.ipynb). 
 
 ### Trying out `ESIGMAHM` via `gwsignal` 
 `ESIGMAHM` can now also be accessed via [`gwsignal`](https://waveforms.docs.ligo.org/reviews/lalsuite/lalsimulation/gwsignal/index.html). See [this notebook](https://github.com/gwnrtools/esigmapy/blob/cfe881a6052f1e9a7c3e066d9fd32462a3af2c89/notebooks/esigma_gwsignal.ipynb) for usage instructions.
@@ -73,50 +88,53 @@ If everything goes fine, you should be able to generate `ESIGMAHM` waveforms. Th
 
 `ESIGMASur` is a fast time-domain surrogate model of `InspiralESIGMA`: the inspiral (2,2)-mode of `ESIGMAHM`.
 
-### Installing `ESIGMASur`
+### Installation
 * Install `ESIGMAPy` by running: `pip install esigmapy`.
   It **does not** require the custom LALSuite installation, NR surrogate data file, or any additional configuration above.
-* You also need to download the surrogate data files of `ESIGMASur`, which can be found [here](https://github.com/Akash-Maurya-0899/esigmapy/tree/surrogate/esigmapy/esigmaSur/data) on the repo. Akin to `NRSur7dq4` installation instructions above, please set the shell environment variable `ESIGMASUR_DATA_PATH` to the directory where you keep these surrogate data files by running: `export ESIGMASUR_DATA_PATH="/path/to/ESIGMASur"`. 
+
+  **Note:** `ESIGMASur` currently supports Python <= 3.12, owing to a compatibility restriction in [`tpi-splines`](https://github.com/mpuerrer/TPI), a dependency of `ESIGMASur`.  
+* Download the surrogate data files of `ESIGMASur`, which can be found [here](https://github.com/Akash-Maurya-0899/esigmapy/tree/surrogate/esigmapy/esigmaSur/data). Next, set the shell environment variable `ESIGMASUR_DATA_PATH` to the directory where you keep these surrogate data files by running: `export ESIGMASUR_DATA_PATH="/path/to/ESIGMASur"`. 
 
 ### Trying out `ESIGMASur`
 The usage instructions and the various functionalities of `ESIGMASur` are detailed in [this tutorial notebook](https://github.com/Akash-Maurya-0899/esigmapy/blob/surrogate/notebooks/ESIGMASur_generation.ipynb).
 
-## Citation
-If you use `ESIGMAHM` in your work, please consider citing: 
+***
+## 📖 Citation
+* If you use `ESIGMAHM` in your work, please consider citing:
+  
+  Paul et al., _"ESIGMAHM: An Eccentric, Spinning inspiral-merger-ringdown waveform model with Higher Modes for the detection and characterization of binary black holes"_, [PhysRevD.111.084074](https://journals.aps.org/prd/abstract/10.1103/PhysRevD.111.084074), arXiv:[2409.13866](https://arxiv.org/abs/2409.13866) (2024)
+  ```
+  @article{Paul:2024ujx,
+      author = "Paul, Kaushik and Maurya, Akash and Henry, Quentin and Sharma, Kartikey and Satheesh, Pranav and Divyajyoti and Kumar, Prayush and Mishra, Chandra Kant",
+      title = "{Eccentric, spinning, inspiral-merger-ringdown waveform model with higher modes for the detection and characterization of binary black holes}",
+      eprint = "2409.13866",
+      archivePrefix = "arXiv",
+      primaryClass = "gr-qc",
+      doi = "10.1103/PhysRevD.111.084074",
+      journal = "Phys. Rev. D",
+      volume = "111",
+      number = "8",
+      pages = "084074",
+      year = "2025"
+  }
+  ```
+  `ESIGMAHM` is built on the `ENIGMA` framework, which was developed in arXiv:[1609.05933](https://arxiv.org/abs/1609.05933), arXiv:[1711.06276](https://arxiv.org/abs/1711.06276), arXiv:[2008.03313](https://arxiv.org/abs/2008.03313). In addition to citing `ESIGMAHM`, please consider citing them as well. 
 
-Paul et. al., _"ESIGMAHM: An Eccentric, Spinning inspiral-merger-ringdown waveform model with Higher Modes for the detection and characterization of binary black holes"_, [PhysRevD.111.084074](https://journals.aps.org/prd/abstract/10.1103/PhysRevD.111.084074), arXiv:[2409.13866](https://arxiv.org/abs/2409.13866) (2024)
-```
-@article{Paul:2024ujx,
-    author = "Paul, Kaushik and Maurya, Akash and Henry, Quentin and Sharma, Kartikey and Satheesh, Pranav and Divyajyoti and Kumar, Prayush and Mishra, Chandra Kant",
-    title = "{Eccentric, spinning, inspiral-merger-ringdown waveform model with higher modes for the detection and characterization of binary black holes}",
-    eprint = "2409.13866",
-    archivePrefix = "arXiv",
-    primaryClass = "gr-qc",
-    doi = "10.1103/PhysRevD.111.084074",
-    journal = "Phys. Rev. D",
-    volume = "111",
-    number = "8",
-    pages = "084074",
-    year = "2025"
-}
-```
-`ESIGMAHM` is built on the `ENIGMA` framework, which was developed in arXiv:[1609.05933](https://arxiv.org/abs/1609.05933), arXiv:[1711.06276](https://arxiv.org/abs/1711.06276), arXiv:[2008.03313](https://arxiv.org/abs/2008.03313). In addition to citing `ESIGMAHM`, please consider citing these works related to `ENIGMA` as well. 
+* If you use `ESIGMASur` in your work, please consider citing:
 
-If you use `ESIGMASur` in your work, please consider citing:
-
-Maurya et. al., _"Chase Orbits, not Time: A Scalable Paradigm for Long-Duration Eccentric Gravitational-Wave Surrogates"_, arXiv:[2510.00116](https://arxiv.org/abs/2510.00116) (2025)
-```
-@article{Maurya:2025shc,
-    author = "Maurya, Akash and Kumar, Prayush and Field, Scott E. and Mishra, Chandra Kant and Nee, Peter James and Paul, Kaushik and Pfeiffer, Harald P. and Ravichandran, Adhrit and Varma, Vijay",
-    title = "{Chase Orbits, not Time: A Scalable Paradigm for Long-Duration Eccentric Gravitational-Wave Surrogates}",
-    eprint = "2510.00116",
-    archivePrefix = "arXiv",
-    primaryClass = "gr-qc",
-    month = "9",
-    year = "2025"
-}
-```
+  Maurya et al., _"Chase Orbits, not Time: A Scalable Paradigm for Long-Duration Eccentric Gravitational-Wave Surrogates"_, arXiv:[2510.00116](https://arxiv.org/abs/2510.00116) (2025)
+  ```
+  @article{Maurya:2025shc,
+      author = "Maurya, Akash and Kumar, Prayush and Field, Scott E. and Mishra, Chandra Kant and Nee, Peter James and Paul, Kaushik and Pfeiffer, Harald P. and Ravichandran, Adhrit and Varma, Vijay",
+      title = "{Chase Orbits, not Time: A Scalable Paradigm for Long-Duration Eccentric Gravitational-Wave Surrogates}",
+      eprint = "2510.00116",
+      archivePrefix = "arXiv",
+      primaryClass = "gr-qc",
+      month = "9",
+      year = "2025"
+  }
+  ```
 
 ***
-## 📬 Contact Us  
+## :mailbox_with_mail: Contact Us  
 If you have any questions, issues, or suggestions regarding the model, feel free to reach out to us at esigmahm@icts.res.in!

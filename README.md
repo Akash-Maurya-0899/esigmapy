@@ -24,6 +24,7 @@ Usage instructions at:
  * `ESIGMAHM` [tutorial notebook](https://github.com/gwnrtools/esigmapy/blob/master/notebooks/ESIGMA_generation.ipynb)
  * `ESIGMASur` [tutorial notebook](https://github.com/Akash-Maurya-0899/esigmapy/blob/surrogate/notebooks/ESIGMASur_generation.ipynb)
 
+***
 ## :blue_square: ESIGMAHM
 
 `ESIGMAHM` is an eccentric, aligned-spin, inspiral-merger-ringdown (IMR) waveform model with higher-order modes. It is composed of two pieces:
@@ -43,7 +44,7 @@ Using `ESIGMAHM` therefore requires installing 1. `InspiralESIGMAHM`, 2. `NRSur7
 
   Clone the [`LALSuite` fork](https://git.ligo.org/kaushik.paul/lalsuite/-/tree/enigma_spins_v2023?ref_type=heads) and checkout the commit with tag `ESIGMAHMv1`:
 
-  ```
+  ```bash
   git clone https://git.ligo.org/kaushik.paul/lalsuite.git
   cd lalsuite
   git checkout ESIGMAHMv1
@@ -54,7 +55,7 @@ Using `ESIGMAHM` therefore requires installing 1. `InspiralESIGMAHM`, 2. `NRSur7
   - Create a directory where you want to install ESIGMA. Let the absolute path of this directory be `/path/to/esigmahm`.
   - Go back inside the above cloned `LALSuite` fork, and run the following commands: 
     
-    ```
+    ```bash
     ./00boot
     ./configure --prefix="/path/to/esigmahm" --enable-swig-python --disable-laldetchar --disable-lalpulsar --disable-lalapps --enable-mpi=yes --enable-hdf5 CFLAGS="-Wno-error" CXXFLAGS="-Wno-error" CPPFLAGS="-Wno-error" 
     make
@@ -62,7 +63,7 @@ Using `ESIGMAHM` therefore requires installing 1. `InspiralESIGMAHM`, 2. `NRSur7
     ```
 * **Configuring `conda` to source this `LALSuite` fork automatically on activating the `conda` environment**
   - With your `conda` environment activated, run the following commands:
-    ```
+    ```bash
     cd $CONDA_PREFIX/etc/conda/activate.d
     ln -s /path/to/esigmahm/etc/lalsuite-user-env.sh
     ```
@@ -103,7 +104,8 @@ The usage instructions and the various functionalities of `ESIGMASur` are detail
 * If you use `ESIGMAHM` in your work, please consider citing:
   
   Paul et al., _"ESIGMAHM: An Eccentric, Spinning inspiral-merger-ringdown waveform model with Higher Modes for the detection and characterization of binary black holes"_, [PhysRevD.111.084074](https://journals.aps.org/prd/abstract/10.1103/PhysRevD.111.084074), arXiv:[2409.13866](https://arxiv.org/abs/2409.13866) (2024)
-  ```
+
+  ```bibtex
   @article{Paul:2024ujx,
       author = "Paul, Kaushik and Maurya, Akash and Henry, Quentin and Sharma, Kartikey and Satheesh, Pranav and Divyajyoti and Kumar, Prayush and Mishra, Chandra Kant",
       title = "{Eccentric, spinning, inspiral-merger-ringdown waveform model with higher modes for the detection and characterization of binary black holes}",
@@ -123,15 +125,17 @@ The usage instructions and the various functionalities of `ESIGMASur` are detail
 * If you use `ESIGMASur` in your work, please consider citing:
 
   Maurya et al., _"Chase Orbits, not Time: A Scalable Paradigm for Long-Duration Eccentric Gravitational-Wave Surrogates"_, arXiv:[2510.00116](https://arxiv.org/abs/2510.00116) (2025)
-  ```
+
+  ```bibtex
   @article{Maurya:2025shc,
       author = "Maurya, Akash and Kumar, Prayush and Field, Scott E. and Mishra, Chandra Kant and Nee, Peter James and Paul, Kaushik and Pfeiffer, Harald P. and Ravichandran, Adhrit and Varma, Vijay",
       title = "{Chase Orbits, not Time: A Scalable Paradigm for Long-Duration Eccentric Gravitational-Wave Surrogates}",
       eprint = "2510.00116",
       archivePrefix = "arXiv",
       primaryClass = "gr-qc",
+      journal = {},
       month = "9",
-      year = "2025"
+      year = "2025",
   }
   ```
 

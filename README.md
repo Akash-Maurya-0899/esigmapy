@@ -17,8 +17,8 @@ Install directly from PyPI:
 pip install esigmapy
 ```
 Then to use:
- * `ESIGMAHM`: requires custom `LALSuite` installation and `NRSur7dq4` surrogate data download ([see below](https://github.com/Akash-Maurya-0899/esigmapy/edit/surrogate/README.md#blue_square-esigmahm)).
- * `ESIGMASur`: requires downloading `ESIGMASur` surrogate data ([see below](https://github.com/Akash-Maurya-0899/esigmapy/edit/surrogate/README.md#green_square-esigmasur))
+ * `ESIGMAHM`: requires custom `LALSuite` installation and `NRSur7dq4` surrogate data download ([installation instructions below](https://github.com/Akash-Maurya-0899/esigmapy/tree/surrogate?tab=readme-ov-file#blue_square-esigmahm)).
+ * `ESIGMASur`: requires downloading `ESIGMASur` surrogate data ([installation instructions below](https://github.com/Akash-Maurya-0899/esigmapy/tree/surrogate?tab=readme-ov-file#green_square-esigmasur))
  
 Usage instructions at:
  * `ESIGMAHM` [tutorial notebook](https://github.com/gwnrtools/esigmapy/blob/master/notebooks/ESIGMA_generation.ipynb)

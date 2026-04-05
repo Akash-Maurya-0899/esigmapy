@@ -118,7 +118,7 @@ if __name__ == "__main__":
             "pycbc",
             "scipy>=1.2.3",
             "tpi-splines",
-            "numba",   
+            "numba",
         ],
         scripts=[],
     )

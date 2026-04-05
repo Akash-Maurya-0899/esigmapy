@@ -17,12 +17,14 @@ from .esigmaSur import _get_surrogate
 ECCENTRICITY_LEVEL_ISCO_WARNING = 0.02
 ECCENTRICITY_LEVEL_ISCO_ERROR = 0.1
 
+
 def get_surrogate_object():
     """
-    Returns the surrogate object. Useful for advanced users who want to 
+    Returns the surrogate object. Useful for advanced users who want to
     directly use the base surrogate class' functionalities.
     """
     return _get_surrogate()
+
 
 def get_inspiral_esigmasur_modes(
     mass1,
@@ -49,18 +51,18 @@ def get_inspiral_esigmasur_modes(
         reference_eccentricity  -- Eccentricity at reference time of surrogate
         reference_mean_anomaly  -- Mean anomaly at reference time of surrogate (in rad)
         distance                -- Luminosity distance to the binary (in Mpc)
-        t_start, t_end          -- Start and end times of the waveform 
+        t_start, t_end          -- Start and end times of the waveform
                                    to be generated (in seconds).
-                                   Note that the surrogate defines t=0 at the end of 
-                                   inspiral, so t_start and t_end should be negative 
+                                   Note that the surrogate defines t=0 at the end of
+                                   inspiral, so t_start and t_end should be negative
                                    and t_start < t_end <= 0.
                                    Defaults to the full duration of the surrogate.
         include_conjugate_modes -- If True, negative "m" modes are included as well
         return_orbital_params   -- If True, returns the orbital evolution of all the orbital elements.
-                                   Can also be a list of orbital variable names to 
-                                   return only those specific variables. Available 
+                                   Can also be a list of orbital variable names to
+                                   return only those specific variables. Available
                                    orbital variables are:
-                                   ['x', 'e', 'l']        
+                                   ['x', 'e', 'l']
         return_pycbc_timeseries -- If True, returns data in the form of PyCBC timeseries.
                                    True by default.
         verbose                 -- Verbosity flag
@@ -73,7 +75,7 @@ def get_inspiral_esigmasur_modes(
                              Returned only if "return_orbital_params" is specified
         modes             -- Dictionary of GW modes
     """
-    
+
     if return_orbital_params:
         orbital_var_names = ["x", "e", "l"]
         if return_orbital_params != True:
@@ -81,30 +83,36 @@ def get_inspiral_esigmasur_modes(
                 if name not in orbital_var_names:
                     raise Exception(
                         f"{name} is not a valid orbital variable name. Available orbital variable names are: {orbital_var_names}."
-                    )    
-    
+                    )
+
     sur = _get_surrogate()
     total_mass = mass1 + mass2
-    q = mass1/mass2
+    q = mass1 / mass2
     if q < 1:
-        q = 1/q
+        q = 1 / q
 
     modes_to_use = [(2, 2)]
 
     # Calculating the orbital variables
     itime = time.perf_counter()
     modes = {}
-    
-    retval = sur(M = total_mass,
-                            params = [q, reference_eccentricity, reference_mean_anomaly], # q, e, l at t=t_ref
-                            delta_t = delta_t, 
-                            t_start=t_start, 
-                            t_end=t_end, 
-                            times=times,
-                            remove_start_phase=True,
-                            return_orbital_variables=return_orbital_params)
-    
-    el, em = modes_to_use[0] # Currently, the surrogate only supports (2, 2) mode, so we directly retrieve that from the returned dictionary.
+
+    retval = sur(
+        M=total_mass,
+        params=[
+            q,
+            reference_eccentricity,
+            reference_mean_anomaly,
+        ],  # q, e, l at t=t_ref
+        delta_t=delta_t,
+        t_start=t_start,
+        t_end=t_end,
+        times=times,
+        remove_start_phase=True,
+        return_orbital_variables=return_orbital_params,
+    )
+    # Currently, the surrogate only supports (2, 2) mode, so we directly retrieve that from the returned dictionary.
+    el, em = modes_to_use[0]
     if return_orbital_params:
         t, orb_vars, modes[(el, em)] = retval
     else:
@@ -113,7 +121,7 @@ def get_inspiral_esigmasur_modes(
 
     if include_conjugate_modes:
         for el, em in modes_to_use:
-            modes[(el, -em)] = (-1)**el * np.conjugate(modes[(el, em)])
+            modes[(el, -em)] = (-1) ** el * np.conjugate(modes[(el, em)])
 
     if return_pycbc_timeseries:
         if times is None:
@@ -121,13 +129,15 @@ def get_inspiral_esigmasur_modes(
                 k: pt.TimeSeries(
                     modes[k],
                     delta_t=delta_t,
-                    epoch=-delta_t * (len(modes[k])-1),
+                    epoch=-delta_t * (len(modes[k]) - 1),
                 )
                 for k in modes
             }
         else:
-            raise ValueError("""Cannot return PyCBC TimeSeries when the user provides custom time grid via `times` due to the possibilty of it being a non-uniform time-grid. 
-Please set `return_pycbc_timeseries=False` if you want to provide custom time grid.""")
+            raise ValueError(
+                """Cannot return PyCBC TimeSeries when the user provides custom time grid via `times` due to the possibilty of it being a non-uniform time-grid. 
+Please set `return_pycbc_timeseries=False` if you want to provide custom time grid."""
+            )
     if verbose:
         print(f"Modes generation took: {time.perf_counter() - itime} seconds")
 
@@ -137,9 +147,9 @@ Please set `return_pycbc_timeseries=False` if you want to provide custom time gr
             return_orbital_params = orbital_var_names
 
         if return_pycbc_timeseries:
-            # No need to check and raise error here if `times` is provided, 
+            # No need to check and raise error here if `times` is provided,
             # because the error will be raised while trying to convert modes
-            # to PyCBC TimeSeries above. 
+            # to PyCBC TimeSeries above.
             for name in return_orbital_params:
                 exec(
                     f"orbital_var_dict['{name}'] = pt.TimeSeries(orb_vars['{name}'], delta_t=delta_t, epoch=-delta_t * (len(orb_vars['{name}'])-1))"
@@ -149,12 +159,13 @@ Please set `return_pycbc_timeseries=False` if you want to provide custom time gr
         for name in return_orbital_params:
             exec(f"orbital_var_dict['{name}'] = orb_vars['{name}']")
         # return (t - t[-1]), orbital_var_dict, modes
-        return t, orbital_var_dict, modes    
-    
+        return t, orbital_var_dict, modes
+
     if return_pycbc_timeseries:
         return modes
     # return (t - t[-1]), modes
     return t, modes
+
 
 def get_inspiral_esigmasur_waveform(
     mass1,
@@ -180,34 +191,34 @@ def get_inspiral_esigmasur_waveform(
     -----------
         mass1, mass2            -- Binary's component masses (in solar masses)
         reference_eccentricity  -- Eccentricity at reference time of surrogate
-        reference_mean_anomaly  -- Mean anomaly at reference time of surrogate (in rad)        
+        reference_mean_anomaly  -- Mean anomaly at reference time of surrogate (in rad)
         delta_t                 -- Waveform's time grid-spacing (in s).
-                                   Can be omitted if providing custom time grid via 
-                                   `times` argument. 
-        t_start, t_end          -- Start and end times of the waveform 
+                                   Can be omitted if providing custom time grid via
+                                   `times` argument.
+        t_start, t_end          -- Start and end times of the waveform
                                    to be generated (in seconds).
-                                   Note that the surrogate defines t=0 at the end of 
-                                   inspiral, so t_start and t_end should be negative 
+                                   Note that the surrogate defines t=0 at the end of
+                                   inspiral, so t_start and t_end should be negative
                                    and t_start < t_end <= 0.
                                    Defaults to the full duration of the surrogate.
-        times                   -- Custom time grid (can be non-uniform) on which the 
-                                   waveform should be generated. Should be a numpy 
-                                   array of time values in seconds. 
+        times                   -- Custom time grid (can be non-uniform) on which the
+                                   waveform should be generated. Should be a numpy
+                                   array of time values in seconds.
                                    If provided, `delta_t`, `t_start` and `t_end` are ignored.
                                    Also set `return_pycbc_timeseries=False` to use this option.
-        inclination             -- Inclination (in rad), defined as the angle between 
+        inclination             -- Inclination (in rad), defined as the angle between
                                    the orbital angular momentum L and the line-of-sight
         coa_phase               -- Coalesence phase of the binary (in rad)
         distance                -- Luminosity distance to the binary (in Mpc)
-        return_orbital_params   -- If True, returns the orbital evolution of all the 
-                                   orbital elements (in geometrized units). Can also be 
-                                   a list of orbital variable names to return only 
-                                   those specific variables. Available orbital 
+        return_orbital_params   -- If True, returns the orbital evolution of all the
+                                   orbital elements (in geometrized units). Can also be
+                                   a list of orbital variable names to return only
+                                   those specific variables. Available orbital
                                    variables names are:
                                    ['x', 'e', 'l']
         return_pycbc_timeseries -- If True, returns data in the form of PyCBC timeseries.
                                     True by default. Set to False if you want to provide custom time grid via `times` argument, or if you want the output in numpy arrays.
-        verbose                 -- Verbosity level. 
+        verbose                 -- Verbosity level.
                                    Available values are: 0, 1, 2
 
     Returns:
@@ -249,11 +260,13 @@ def get_inspiral_esigmasur_waveform(
 
     if return_pycbc_timeseries:
         if times is None:
-            hp = pt.TimeSeries(hp, delta_t=delta_t, epoch=-delta_t * (len(hp)-1))
-            hc = pt.TimeSeries(hc, delta_t=delta_t, epoch=-delta_t * (len(hc)-1))
+            hp = pt.TimeSeries(hp, delta_t=delta_t, epoch=-delta_t * (len(hp) - 1))
+            hc = pt.TimeSeries(hc, delta_t=delta_t, epoch=-delta_t * (len(hc) - 1))
         else:
-            raise ValueError("""Cannot return PyCBC TimeSeries when the user provides custom time grid via `times` due to the possibilty of it being a non-uniform time-grid. 
-Please set `return_pycbc_timeseries=False` if you want to provide custom time grid.""") 
+            raise ValueError(
+                """Cannot return PyCBC TimeSeries when the user provides custom time grid via `times` due to the possibilty of it being a non-uniform time-grid. 
+Please set `return_pycbc_timeseries=False` if you want to provide custom time grid."""
+            )
 
     if return_orbital_params:
         if return_pycbc_timeseries:
@@ -261,12 +274,13 @@ Please set `return_pycbc_timeseries=False` if you want to provide custom time gr
                 exec(
                     f"orbital_var_dict['{name}'] = pt.TimeSeries(orbital_var_dict['{name}'], delta_t=delta_t, epoch=-delta_t * (len(orbital_var_dict['{name}'])-1))"
                 )
-            return orbital_var_dict, hp, hc       
+            return orbital_var_dict, hp, hc
         return t, orbital_var_dict, hp, hc
 
     if return_pycbc_timeseries:
         return hp, hc
     return t, hp, hc
+
 
 def get_imr_esigmasur_mode(
     mass1,
@@ -287,7 +301,8 @@ def get_imr_esigmasur_mode(
     return_hybridization_info=False,
     return_orbital_params=False,
     failsafe=True,
-    verbose=False):
+    verbose=False,
+):
     """
     Returns IMR GW modes constructed using ESIGMASur for inspiral and
     NRSur7dq4/SEOBNRv4PHM for merger-ringdown
@@ -299,8 +314,8 @@ def get_imr_esigmasur_mode(
         reference_eccentricity    -- Eccentricity at reference time of surrogate
         reference_mean_anomaly    -- Mean anomaly at reference time of surrogate (in rad)
         t_start                   -- Start time of the waveform to be generated (in seconds).
-                                     Note that the surrogate defines t=0 at the end of 
-                                     inspiral, so t_start should be negative 
+                                     Note that the surrogate defines t=0 at the end of
+                                     inspiral, so t_start should be negative
                                      and t_start < 0.
                                      Defaults to the full duration of the surrogate.
         coa_phase                 -- Coalesence phase of the binary (in rad)
@@ -364,10 +379,9 @@ def get_imr_esigmasur_mode(
                              flag `return_hybridization_info` is set
     """
 
-    
-    spin1z=0.0
-    spin2z=0.0
-    blend_using_avg_orbital_frequency=True
+    spin1z = 0.0
+    spin2z = 0.0
+    blend_using_avg_orbital_frequency = True
     modes_to_use = [(2, 2)]
     mode_to_align_by = (2, 2)
 
@@ -447,7 +461,7 @@ parameters available with us: {available_inspiral_orbital_params}.
         reference_eccentricity=reference_eccentricity,
         reference_mean_anomaly=reference_mean_anomaly,
         t_start=t_start,
-        t_end=None, # To generate the full inspiral for attachment to merger
+        t_end=None,  # To generate the full inspiral for attachment to merger
         delta_t=delta_t,
         distance=distance,
         include_conjugate_modes=include_conjugate_modes,
@@ -455,7 +469,7 @@ parameters available with us: {available_inspiral_orbital_params}.
         return_pycbc_timeseries=False,
         verbose=verbose,
     )
-    
+
     # Retrieve modes, orbital phase and frequency from the returned list
     modes_inspiral_numpy = retval[-1]
 
@@ -490,8 +504,10 @@ model might be affected."""
                 retval[-2]["x"] ** 1.5 / ((mass1 + mass2) * lal.MTSUN_SI) / (2 * np.pi)
             )
         else:
-            NotImplementedError("Can't use any prescription other than the orbit averaged frequency one.")
-            
+            NotImplementedError(
+                "Can't use any prescription other than the orbit averaged frequency one."
+            )
+
     if return_orbital_params_user:
         orbital_vars_dict = {
             key: pt.TimeSeries(retval[-2][key], delta_t=delta_t, epoch=retval[0][0])
@@ -596,7 +612,7 @@ requested is {f_mr_transition}Hz, which should be less than the maximum freq of
         except:
             f_lower_mr *= 0.8
             continue
-        
+
     # Extracting only the modes we need
     modes_to_use = list(modes_inspiral_numpy.keys())
     modes_mr_numpy = {}
@@ -661,6 +677,7 @@ eccentricity at the end of inspiral was {orbital_eccentricity[-1]}
         return retval, modes_imr
     return modes_imr
 
+
 def get_imr_esigmasur_waveform(
     mass1,
     mass2,
@@ -680,7 +697,8 @@ def get_imr_esigmasur_waveform(
     return_hybridization_info=False,
     return_orbital_params=False,
     failsafe=True,
-    verbose=False):
+    verbose=False,
+):
     """
     Returns IMR GW polarizations constructed using hybridized IMR ESIGMASur modes
 
@@ -691,8 +709,8 @@ def get_imr_esigmasur_waveform(
         reference_eccentricity    -- Eccentricity at reference time of surrogate
         reference_mean_anomaly    -- Mean anomaly at reference time of surrogate (in rad)
         t_start                   -- Start time of the waveform to be generated (in seconds).
-                                     Note that the surrogate defines t=0 at the end of 
-                                     inspiral, so t_start should be negative 
+                                     Note that the surrogate defines t=0 at the end of
+                                     inspiral, so t_start should be negative
                                      and t_start < 0.
                                      Defaults to the full duration of the surrogate.
         distance                  -- Luminosity distance to the binary (in Mpc)
@@ -754,9 +772,9 @@ def get_imr_esigmasur_waveform(
                         Returned only if return_orbital_params is specified
         retval       -- Hybridization related data.
                         Returned only if return_hybridization_info is True
-    """  
+    """
 
-    retval = get_imr_esigmasur_mode(        
+    retval = get_imr_esigmasur_mode(
         mass1=mass1,
         mass2=mass2,
         reference_eccentricity=reference_eccentricity,

@@ -205,7 +205,7 @@ def get_inspiral_esigma_modes(
     """
 
     if return_orbital_params:
-        all_orbital_var_names = ["t", "x", "e", "l", "phi", "phidot", "r", "rdot"]
+        all_orbital_var_names = ["x", "e", "l", "phi", "phidot", "r", "rdot"]
         if return_orbital_params != True:
             for name in return_orbital_params:
                 if name not in all_orbital_var_names:
@@ -218,6 +218,7 @@ def get_inspiral_esigma_modes(
     f_start = f_lower
     if f_ref is None:
         f_start = f_lower
+        f_ref = f_lower
         itime = time.perf_counter()
     elif f_ref > f_lower:
         # Calculating new orbital variables

@@ -5,7 +5,7 @@
 | Model | Description |
 |---|---|
 | `ESIGMAHM` | Eccentric, aligned-spin IMR waveform with higher modes (arXiv:[2409.13866](https://arxiv.org/abs/2409.13866)) |
-| `ESIGMASur` | Surrogate model for fast `InspiralESIGMA` waveform generation (arXiv:[2510.00116](https://arxiv.org/abs/2510.00116))|
+| `ESIGMASur` | Surrogate model for the (2,2)-mode of `ESIGMAHM` (arXiv:[2510.00116](https://arxiv.org/abs/2510.00116))|
 
 ---
 
@@ -22,8 +22,7 @@ Then to use:
  
 Usage instructions at:
  * `ESIGMAHM` [tutorial notebook](https://github.com/gwnrtools/esigmapy/blob/master/notebooks/ESIGMA_generation.ipynb)
- * `ESIGMASur` [tutorial notebook](https://github.com/Akash-Maurya-0899/esigmapy/blob/surrogate/notebooks/ESIGMASur_generation.ipynb)
-
+ * `ESIGMASur` [tutorial notebook](https://github.com/Akash-Maurya-0899/esigmapy/blob/surrogate/notebooks/ESIGMASur_tutorial.ipynb)
 ***
 ## :blue_square: ESIGMAHM
 
@@ -87,14 +86,17 @@ The instructions to generate `ESIGMAHM` waveforms and the various functionalitie
 
 ## :green_square: ESIGMASur
 
-`ESIGMASur` is a fast time-domain surrogate model of `InspiralESIGMA`: the inspiral (2,2)-mode of `ESIGMAHM`.
+`ESIGMASur` is a fast time-domain surrogate model of inspiral (2,2)-mode of `ESIGMAHM`.
 
 ### Installation
 * Install `ESIGMAPy` by running: `pip install esigmapy`.
-  It **does not** require the custom LALSuite installation, NR surrogate data file, or any additional configuration above.
+  It **does not** require the custom LALSuite installation above.
 
-  **Note:** `ESIGMASur` currently supports Python <= 3.12, owing to a compatibility restriction in [`tpi-splines`](https://github.com/mpuerrer/TPI), a dependency of `ESIGMASur`.  
-* Download the surrogate data files of `ESIGMASur`, which can be found [here](https://github.com/Akash-Maurya-0899/esigmapy/tree/surrogate/esigmapy/esigmaSur/data). Next, set the shell environment variable `ESIGMASUR_DATA_PATH` to the directory where you keep these surrogate data files by running: `export ESIGMASUR_DATA_PATH="/path/to/ESIGMASur"`. 
+  **Note 1:** `ESIGMASur` currently supports Python <= 3.12, owing to a compatibility restriction in [`tpi-splines`](https://github.com/mpuerrer/TPI), a dependency of `ESIGMASur`.
+    
+* Download the surrogate data files of `ESIGMASur`, which can be found [here](https://github.com/Akash-Maurya-0899/esigmapy/tree/surrogate/esigmapy/esigmaSur/data). Next, set the shell environment variable `ESIGMASUR_DATA_PATH` to the directory where you keep these surrogate data files by running: `export ESIGMASUR_DATA_PATH="/path/to/ESIGMASur"`.
+
+* Using the inspiral-only surrogate `InspiralESIGMASur` would not require any additional dependencies. However, its hybridized IMR version `IMRESIGMASur` will require downloading the NR surrogate data file ([installation instructions above](https://github.com/Akash-Maurya-0899/esigmapy/tree/surrogate#installing-nrsur7dq4)). 
 
 ### Trying out `ESIGMASur`
 The usage instructions and the various functionalities of `ESIGMASur` are detailed in [this tutorial notebook](https://github.com/Akash-Maurya-0899/esigmapy/blob/surrogate/notebooks/ESIGMASur_generation.ipynb).

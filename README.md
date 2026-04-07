@@ -92,7 +92,7 @@ The instructions to generate `ESIGMAHM` waveforms and the various functionalitie
 * Install `ESIGMAPy` by running: `pip install esigmapy`.
   It **does not** require the custom LALSuite installation above.
 
-  **Note 1:** `ESIGMASur` currently supports Python <= 3.12, owing to a compatibility restriction in [`tpi-splines`](https://github.com/mpuerrer/TPI), a dependency of `ESIGMASur`.
+  **Note:** `ESIGMASur` currently supports Python <= 3.12, owing to a compatibility restriction in [`tpi-splines`](https://github.com/mpuerrer/TPI), a dependency of `ESIGMASur`.
     
 * Download the surrogate data files of `ESIGMASur`, which can be found [here](https://github.com/Akash-Maurya-0899/esigmapy/tree/surrogate/esigmapy/esigmaSur/data). Next, set the shell environment variable `ESIGMASUR_DATA_PATH` to the directory where you keep these surrogate data files by running: `export ESIGMASUR_DATA_PATH="/path/to/ESIGMASur"`.
 
